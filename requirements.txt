@@ -1,0 +1,4 @@
+dataclasses_json
+pandas
+matplotlib
+utspclient
