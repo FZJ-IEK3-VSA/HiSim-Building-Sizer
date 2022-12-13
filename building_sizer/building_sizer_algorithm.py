@@ -51,7 +51,7 @@ class BuildingSizerRequest:
     )
 
     # parameters for HiSim
-    archetype_config: archetype_config.ArcheTypeConfig = None
+    archetype_config_: archetype_config.ArcheTypeConfig = None
 
     # stores the HiSim requests triggered in earlier iterations
     requisite_requests: List[TimeSeriesRequest] = dataclasses.field(
@@ -102,7 +102,7 @@ def send_hisim_requests(system_configs: List[system_config.SystemConfig], reques
         # If a hisim version is specified, use that version
         provider_name += f"-{request.hisim_version}"
     # Create modular household configs for hisim request
-    configs = [modular_household_config.ModularHouseholdConfig(system_config, request.archetype_config) for system_config in system_configs]
+    configs = [modular_household_config.ModularHouseholdConfig(system_config, request.archetype_config_) for system_config in system_configs]
     # Prepare the time series requests
     hisim_requests = [
         TimeSeriesRequest(

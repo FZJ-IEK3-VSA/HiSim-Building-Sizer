@@ -2,3 +2,4 @@ dataclasses_json
 pandas
 matplotlib
 utspclient
+hisim~=0.1.1

@@ -86,8 +86,8 @@ def main():
     guid = ""  # .join(random.choices(string.ascii_uppercase + string.digits, k=10))
 
     # Set the parameters for the building sizer
-    hisim_version = "0.1.0.test2"
-    building_sizer_version = "0.1.1"
+    hisim_version = None
+    building_sizer_version = None
     options = system_config.SizingOptions()
 
     # Create an initial simulation configuration for the building sizer
@@ -103,7 +103,7 @@ def main():
         crossover_probability=0.2,
         mutation_probability=0.4,
         options=options,
-        archetype_config=None,
+        archetype_config_=None,
     )
     building_sizer_config_json = initial_building_sizer_config.to_json()  # type: ignore
     # Create the initial building sizer request

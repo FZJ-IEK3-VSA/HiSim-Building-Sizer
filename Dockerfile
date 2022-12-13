@@ -2,12 +2,13 @@ FROM python
 
 WORKDIR /app
 
-# Install utsp-client
-RUN pip install git+https://github.com/FZJ-IEK3-VSA/UTSP_Client.git
+# Install HDF5, which is required to build h5py during the installation of the requirements
+RUN apt-get update
+RUN apt-get -y upgrade
+RUN apt-get install libhdf5-serial-dev -y
 
 # Copy source code to image
-COPY . building_sizer
-RUN mv building_sizer/setup.py ./
+COPY . .
 # Install building sizer
 RUN pip install .
 
