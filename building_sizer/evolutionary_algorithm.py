@@ -4,23 +4,25 @@ from hisim.modular_household.interface_configs import system_config  # type: ign
 from typing import List, Tuple
 import random
 
+from building_sizer import individual_encoding
+
 
 def unique(
-    individuals: List[system_config.Individual],
-) -> List[system_config.Individual]:
+    individuals: List[individual_encoding.Individual],
+) -> List[individual_encoding.Individual]:
     """
     Compares all individuals and deletes duplicates.
 
     Parameters
     ----------
-    rated_individuals : List[system_config.RatedIndividual]
+    rated_individuals : List[individual_encoding.RatedIndividual]
         List of all individuals
     population_size : int
         Amount of individuals to be selected
 
     Returns
     -------
-    selected_individuals : List[system_config.RatedIndividual]
+    selected_individuals : List[individual_encoding.RatedIndividual]
 
     """
     len_individuals = len(individuals)
@@ -41,21 +43,21 @@ def unique(
 
 
 def selection(
-    rated_individuals: List[system_config.RatedIndividual], population_size: int
-) -> List[system_config.RatedIndividual]:
+    rated_individuals: List[individual_encoding.RatedIndividual], population_size: int
+) -> List[individual_encoding.RatedIndividual]:
     """
     Selects best individuals.
 
     Parameters
     ----------
-    rated_individuals : List[system_config.RatedIndividual]
+    rated_individuals : List[individual_encoding.RatedIndividual]
         List of all individuals
     population_size : int
         Amount of individuals to be selected
 
     Returns
     -------
-    selected_individuals : List[system_config.RatedIndividual]
+    selected_individuals : List[individual_encoding.RatedIndividual]
 
     """
     # Sort individuals decendingly using their rating
@@ -68,36 +70,36 @@ def selection(
 
 
 def complete_population(
-    original_parents: List[system_config.Individual],
+    original_parents: List[individual_encoding.Individual],
     population_size: int,
-    options: system_config.SizingOptions,
-) -> List[system_config.Individual]:
+    options: individual_encoding.SizingOptions,
+) -> List[individual_encoding.Individual]:
     len_parents = len(original_parents)
     for _ in range(population_size - len_parents):
-        individual = system_config.Individual()
+        individual = individual_encoding.Individual()
         individual.create_random_individual(options=options)
         original_parents.append(individual)
     return original_parents
 
 
 def crossover_conventional(
-    parent1: system_config.Individual, parent2: system_config.Individual
-) -> Tuple[system_config.Individual, system_config.Individual]:
+    parent1: individual_encoding.Individual, parent2: individual_encoding.Individual
+) -> Tuple[individual_encoding.Individual, individual_encoding.Individual]:
     """
     cross over: exchange parts of bitstring by randomly generated index
 
     Parameters
     ----------
-    parent1 : system_config.RatedIndividual
+    parent1 : individual_encoding.RatedIndividual
         Encoding of first parent used for cross over.
-    parent2 : system_config.RatedIndividual
+    parent2 : individual_encoding.RatedIndividual
         Encoding of second parent used for cross over.
 
     Returns
     -------
-    child1 : system_config.RatedIndividual
+    child1 : individual_encoding.RatedIndividual
         Encoding of first resulting child from cross over.
-    child2 : system_config.RatedIndividual
+    child2 : individual_encoding.RatedIndividual
         Encoding of second resulting child from cross over.
     """
     vector_bool_1 = parent1.bool_vector[:]  # cloning all relevant lists
@@ -114,56 +116,56 @@ def crossover_conventional(
     child_bool_2 = vector_bool_2[:pt] + vector_bool_1[pt:]
     child_discrete_1 = vector_discrete_1[:pt] + vector_discrete_2[pt:]
     child_discrete_2 = vector_discrete_2[:pt] + vector_discrete_1[pt:]
-    child1 = system_config.Individual(
+    child1 = individual_encoding.Individual(
         bool_vector=child_bool_1, discrete_vector=child_discrete_1
     )
-    child2 = system_config.Individual(
+    child2 = individual_encoding.Individual(
         bool_vector=child_bool_2, discrete_vector=child_discrete_2
     )
 
     return child1, child2
 
 
-def mutation_bool(parent: system_config.Individual) -> system_config.Individual:
+def mutation_bool(parent: individual_encoding.Individual) -> individual_encoding.Individual:
     """
     Mutation: changing bit value at one position in boolean vector.
 
     Parameters
     ----------
-    parent : system_config.Individual
+    parent : individual_encoding.Individual
         Encoding of parent used for mutation.
 
     Returns
     -------
-    child : system_config.RatedIndividual
+    child : individual_encoding.RatedIndividual
         Encoding of first resulting child from cross over.
     """
     vector_bool = parent.bool_vector[:]
     bit = random.randint(0, len(vector_bool) - 1)
     vector_bool[bit] = not vector_bool[bit]
-    child = system_config.Individual(
+    child = individual_encoding.Individual(
         bool_vector=vector_bool, discrete_vector=parent.discrete_vector
     )
     return child
 
 
 def mutation_discrete(
-    parent: system_config.Individual, options: system_config.SizingOptions
-) -> system_config.Individual:
+    parent: individual_encoding.Individual, options: individual_encoding.SizingOptions
+) -> individual_encoding.Individual:
     """
     Mutation: changing bit value at one position in discrete vector.
 
     Parameters
     ----------
-    parent : system_config.Individual
+    parent : individual_encoding.Individual
         Encoding of parent for mutation.
-    options : system_config.SizingOptions
+    options : individual_encoding.SizingOptions
         Instance of dataclass sizing options.
         It contains a list of all available options for sizing of each component.
 
     Returns
     -------
-    child : system_config.RatedIndividual
+    child : individual_encoding.RatedIndividual
         Encoding of first resulting child from cross over.
     """
     vector_discrete = parent.discrete_vector[:]
@@ -172,25 +174,25 @@ def mutation_discrete(
     vector_discrete[bit] = random.choice(
         getattr(options, options.discrete_attributes[bit])
     )
-    child = system_config.Individual(
+    child = individual_encoding.Individual(
         bool_vector=parent.bool_vector, discrete_vector=vector_discrete
     )
     return child
 
 
 def evolution(
-    parents: List[system_config.Individual],
+    parents: List[individual_encoding.Individual],
     r_cross: float,
     r_mut: float,
     mode: str,
-    options: system_config.SizingOptions,
-) -> List[system_config.Individual]:
+    options: individual_encoding.SizingOptions,
+) -> List[individual_encoding.Individual]:
     """
     evolution step of the genetic algorithm
 
     Parameters
     ----------
-    parents : List[system_config.RatedIndividual]
+    parents : List[individual_encoding.RatedIndividual]
         List of rated individuals.
     r_cross : float
         Cross over probability.
@@ -201,7 +203,7 @@ def evolution(
 
     Returns
     -------
-    Children : List[system_config.Individual]
+    Children : List[individual_encoding.Individual]
         List of individuals unrated individuals.
 
     """

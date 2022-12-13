@@ -8,7 +8,7 @@ import pandas as pd
 from utspclient import client  # type: ignore
 from utspclient.datastructures import TimeSeriesRequest  # type: ignore
 
-from building_sizer import building_sizer_algorithm
+from building_sizer import building_sizer_algorithm, individual_encoding
 from building_sizer.building_sizer_algorithm import (
     BuildingSizerRequest,
     BuildingSizerResult,
@@ -88,7 +88,7 @@ def main():
     # Set the parameters for the building sizer
     hisim_version = None
     building_sizer_version = None
-    options = system_config.SizingOptions()
+    options = individual_encoding.SizingOptions()
 
     # Create an initial simulation configuration for the building sizer
     initial_building_sizer_config = BuildingSizerRequest(

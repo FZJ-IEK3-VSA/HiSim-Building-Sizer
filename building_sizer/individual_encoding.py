@@ -40,7 +40,7 @@ class SizingOptions:
     def __post_init__(self):
         """Checks if every element of attribute list bool_attributes and list discrete_attributes
         is also attribute of class SystemConfig."""
-        for name in SizingOptions.bool_attributes + SizingOptions.discrete_attributes:
+        for name in self.bool_attributes + self.discrete_attributes:
             if not hasattr(SystemConfig, name):
                 raise Exception(
                     f"Invalid vector attribute: SystemConfig has no member '{name}'"
