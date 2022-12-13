@@ -5,6 +5,7 @@ from typing import Dict, Iterable, List
 
 import matplotlib.pyplot as plt  # type: ignore
 import pandas as pd
+from hisim.modular_household.interface_configs import kpi_config  # type: ignore
 from utspclient import client  # type: ignore
 from utspclient.datastructures import TimeSeriesRequest  # type: ignore
 
@@ -13,7 +14,6 @@ from building_sizer.building_sizer_algorithm import (
     BuildingSizerRequest,
     BuildingSizerResult,
 )
-from hisim.modular_household.interface_configs import kpi_config, system_config # type: ignore
 
 # Define URL and API key for the UTSP server
 URL = "http://134.94.131.167:443/api/v1/profilerequest"

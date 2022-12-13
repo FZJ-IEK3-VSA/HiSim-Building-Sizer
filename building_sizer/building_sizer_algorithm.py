@@ -12,6 +12,12 @@ import dataclasses
 from typing import Any, Dict, List, Optional, Tuple
 
 import dataclasses_json
+from hisim.modular_household.interface_configs import kpi_config  # type: ignore
+from hisim.modular_household.interface_configs import (  # type: ignore
+    archetype_config,
+    modular_household_config,
+    system_config,
+)
 from utspclient import client  # type: ignore
 from utspclient.datastructures import (
     CalculationStatus,
@@ -20,9 +26,8 @@ from utspclient.datastructures import (
     TimeSeriesRequest,
 )
 
-from building_sizer import individual_encoding
 from building_sizer import evolutionary_algorithm as evo_alg
-from hisim.modular_household.interface_configs import kpi_config, system_config, archetype_config, modular_household_config  # type: ignore
+from building_sizer import individual_encoding
 
 
 @dataclasses_json.dataclass_json
@@ -92,7 +97,9 @@ class BuildingSizerResult:
     result: Any = None
 
 
-def send_hisim_requests(system_configs: List[system_config.SystemConfig], request: BuildingSizerRequest) -> List[TimeSeriesRequest]:
+def send_hisim_requests(
+    system_configs: List[system_config.SystemConfig], request: BuildingSizerRequest
+) -> List[TimeSeriesRequest]:
     """
     Creates and sends one time series request to the utsp for every passed hisim configuration
     """
@@ -102,7 +109,12 @@ def send_hisim_requests(system_configs: List[system_config.SystemConfig], reques
         # If a hisim version is specified, use that version
         provider_name += f"-{request.hisim_version}"
     # Create modular household configs for hisim request
-    configs = [modular_household_config.ModularHouseholdConfig(system_config, request.archetype_config_) for system_config in system_configs]
+    configs = [
+        modular_household_config.ModularHouseholdConfig(
+            system_config, request.archetype_config_
+        )
+        for system_config in system_configs
+    ]
     # Prepare the time series requests
     hisim_requests = [
         TimeSeriesRequest(
@@ -166,9 +178,7 @@ def trigger_next_iteration(
     :rtype: TimeSeriesRequest
     """
     # Send the new requests to the UTSP
-    hisim_requests = send_hisim_requests(
-        hisim_configs, request
-    )
+    hisim_requests = send_hisim_requests(hisim_configs, request)
     # Send a new building_sizer request to trigger the next building sizer iteration. This must be done after sending the
     # requisite hisim requests to guarantee that the UTSP will not be blocked.
     return send_building_sizer_request(request, hisim_requests)
@@ -212,7 +222,7 @@ def building_sizer_iteration(
 
         # Extract the rating for each HiSim config
         # TODO: check if rating works
-        kpi_instance: kpi_config.KPIConfig = KPIConfig.from_json(result.data["kpi_config.json"].decode())  # type: ignore
+        kpi_instance: kpi_config.KPIConfig = kpi_config.KPIConfig.from_json(result.data["kpi_config.json"].decode())  # type: ignore
         rating = kpi_instance.get_kpi()
         system_config_instance: system_config.SystemConfig = system_config.SystemConfig.from_json(sim_config_str)  # type: ignore
         individual = individual_encoding.get_individual(system_config_instance, options)
