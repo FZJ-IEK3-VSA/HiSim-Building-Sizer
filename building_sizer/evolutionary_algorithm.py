@@ -126,7 +126,9 @@ def crossover_conventional(
     return child1, child2
 
 
-def mutation_bool(parent: individual_encoding.Individual) -> individual_encoding.Individual:
+def mutation_bool(
+    parent: individual_encoding.Individual,
+) -> individual_encoding.Individual:
     """
     Mutation: changing bit value at one position in boolean vector.
 

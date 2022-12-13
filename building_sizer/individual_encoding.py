@@ -96,6 +96,7 @@ def get_individual(system_config: SystemConfig, options: SizingOptions) -> Indiv
     ]
     return Individual(bool_vector, discrete_vector)
 
+
 def create_from_individual(
     individual: Individual, options: SizingOptions
 ) -> "SystemConfig":
@@ -119,6 +120,7 @@ def create_from_individual(
         setattr(system_config, name, individual.discrete_vector[i])
     return system_config
 
+
 def create_random_system_configs(number: int, options: SizingOptions) -> List[str]:
     """
     Creates the desired number of random SystemConfig objects
@@ -130,11 +132,11 @@ def create_random_system_configs(number: int, options: SizingOptions) -> List[st
         individual.create_random_individual(options=options)
         # Convert the Individual to a SystemConfig object and
         # append it to the list
-        hisim_configs.append(create_from_individual(
-                individual, options
-            ).to_json()  # type: ignore
+        hisim_configs.append(
+            create_from_individual(individual, options).to_json()  # type: ignore
         )
     return hisim_configs
+
 
 def save_system_configs_to_file(configs: List[str]) -> None:
     with open("./random_system_configs.json", "w") as f:
