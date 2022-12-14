@@ -74,10 +74,11 @@ def minimize_config(hisim_config: str) -> str:
     """
     import json
 
-    d = json.loads(hisim_config)
+    modular_hh_config = json.loads(hisim_config)
+    sys_config = modular_hh_config["system_config_"]
     keys = ["pv_included", "pv_peak_power", "battery_included", "battery_capacity"]
-    d = {k: d[k] for k in keys}
-    return json.dumps(d)
+    minimal = {k: sys_config[k] for k in keys}
+    return json.dumps(minimal)
 
 
 def main():
@@ -86,8 +87,8 @@ def main():
     guid = ""  # .join(random.choices(string.ascii_uppercase + string.digits, k=10))
 
     # Set the parameters for the building sizer
-    hisim_version = None
-    building_sizer_version = None
+    hisim_version = "0.1.1"
+    building_sizer_version = ""
     options = individual_encoding.SizingOptions()
 
     # Create an initial simulation configuration for the building sizer
@@ -106,10 +107,13 @@ def main():
         archetype_config_=None,
     )
     building_sizer_config_json = initial_building_sizer_config.to_json()  # type: ignore
+    provider_name = "building_sizer" + (
+        f"-{building_sizer_version}" if building_sizer_version else ""
+    )
     # Create the initial building sizer request
     building_sizer_request = TimeSeriesRequest(
         building_sizer_config_json,
-        f"building_sizer-{building_sizer_version}",
+        provider_name,
         guid=guid,
     )
 

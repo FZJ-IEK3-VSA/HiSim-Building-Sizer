@@ -56,7 +56,8 @@ class Individual:
     bool_vector: List[bool] = field(default_factory=list)
     discrete_vector: List[float] = field(default_factory=list)
 
-    def create_random_individual(self, options: SizingOptions) -> None:
+    @staticmethod
+    def create_random_individual(options: SizingOptions) -> "Individual":
         """Creates random individual.
 
         Parameters
@@ -66,14 +67,16 @@ class Individual:
             It contains a list of all available options for sizing of each component.
 
         """
+        individual = Individual()
         # randomly assign the bool attributes True or False
         for probability in options.probabilities:
             dice = random.uniform(0, 1)  # random number between zero and one
-            self.bool_vector.append(dice < probability)
+            individual.bool_vector.append(dice < probability)
         # randomly assign the discrete attributes depending on the allowed values
         for component in options.discrete_attributes:
             allowed_values = getattr(options, component)
-            self.discrete_vector.append(random.choice(allowed_values))
+            individual.discrete_vector.append(random.choice(allowed_values))
+        return individual
 
 
 @dataclass_json
@@ -86,7 +89,9 @@ class RatedIndividual:
     rating: float
 
 
-def get_individual(system_config: SystemConfig, options: SizingOptions) -> Individual:
+def create_individual_from_config(
+    system_config: SystemConfig, options: SizingOptions
+) -> Individual:
     """Creates discrete and boolean vector from given SystemConfig."""
     bool_vector: List[bool] = [
         getattr(system_config, name) for name in options.bool_attributes
@@ -97,9 +102,9 @@ def get_individual(system_config: SystemConfig, options: SizingOptions) -> Indiv
     return Individual(bool_vector, discrete_vector)
 
 
-def create_from_individual(
+def create_config_from_individual(
     individual: Individual, options: SizingOptions
-) -> "SystemConfig":
+) -> SystemConfig:
     """
     Creates a SystemConfig object from the bool and discrete vectors of an
     Individual object. For this, the SizingOptions object is needed.
@@ -121,23 +126,22 @@ def create_from_individual(
     return system_config
 
 
-def create_random_system_configs(number: int, options: SizingOptions) -> List[str]:
+def create_random_system_configs(
+    number: int, options: SizingOptions
+) -> List[SystemConfig]:
     """
     Creates the desired number of random SystemConfig objects
     """
     hisim_configs = []
     for _ in range(number):
         # Create a random Individual
-        individual = Individual()
-        individual.create_random_individual(options=options)
+        individual = Individual.create_random_individual(options)
         # Convert the Individual to a SystemConfig object and
         # append it to the list
-        hisim_configs.append(
-            create_from_individual(individual, options).to_json()  # type: ignore
-        )
+        hisim_configs.append(create_config_from_individual(individual, options))
     return hisim_configs
 
 
 def save_system_configs_to_file(configs: List[str]) -> None:
-    with open("./random_system_configs.json", "w") as f:
+    with open("./random_system_configs.json", "w", encoding="utf-8") as f:
         json.dump(configs, f)

@@ -167,7 +167,7 @@ def get_results_from_requisite_requests(
 
 
 def trigger_next_iteration(
-    request: BuildingSizerRequest, hisim_configs: List[str]
+    request: BuildingSizerRequest, hisim_configs: List[system_config.SystemConfig]
 ) -> TimeSeriesRequest:
     """
     Sends the specified HiSim requests to the UTSP, and afterwards sends the request for the next building sizer iteration.
@@ -225,7 +225,9 @@ def building_sizer_iteration(
         kpi_instance: kpi_config.KPIConfig = kpi_config.KPIConfig.from_json(result.data["kpi_config.json"].decode())  # type: ignore
         rating = kpi_instance.get_kpi()
         system_config_instance: system_config.SystemConfig = system_config.SystemConfig.from_json(sim_config_str)  # type: ignore
-        individual = individual_encoding.get_individual(system_config_instance, options)
+        individual = individual_encoding.create_individual_from_config(
+            system_config_instance, options
+        )
         r = individual_encoding.RatedIndividual(individual, rating)
         rated_individuals.append(r)
 
@@ -237,11 +239,12 @@ def building_sizer_iteration(
     # pass rated_individuals to genetic algorithm and receive list of new individual vectors back
     parent_individuals = [ri.individual for ri in parents]
 
-    """     parent_individuals = evo_alg.complete_population(
-        original_parents=parent_individuals,
-        population_size=population_size,
-        options=options,
-    ) """
+    # add random individuals to complete the population, in case too many individual were duplicates
+    # parent_individuals = evo_alg.complete_population(
+    #     original_parents=parent_individuals,
+    #     population_size=population_size,
+    #     options=options,
+    # )
 
     new_individuals = evo_alg.evolution(
         parents=parent_individuals,
@@ -266,12 +269,12 @@ def building_sizer_iteration(
         return None, "my final results"
 
     # convert individuals back to HiSim SystemConfigs
-    hisim_configs = []
+    hisim_configs: List[system_config.SystemConfig] = []
     for individual in new_individuals:
-        system_config_instance = individual_encoding.create_from_individual(
+        system_config_instance = individual_encoding.create_config_from_individual(
             individual, options
         )
-        hisim_configs.append(system_config_instance.to_json())  # type: ignore
+        hisim_configs.append(system_config_instance)
 
     # trigger the next iteration with the new hisim configurations
     next_request = trigger_next_iteration(request, hisim_configs)

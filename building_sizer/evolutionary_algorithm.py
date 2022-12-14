@@ -76,8 +76,9 @@ def complete_population(
 ) -> List[individual_encoding.Individual]:
     len_parents = len(original_parents)
     for _ in range(population_size - len_parents):
-        individual = individual_encoding.Individual()
-        individual.create_random_individual(options=options)
+        individual = individual_encoding.Individual.create_random_individual(
+            options=options
+        )
         original_parents.append(individual)
     return original_parents
 
