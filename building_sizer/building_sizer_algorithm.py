@@ -56,7 +56,7 @@ class BuildingSizerRequest:
     )
 
     # parameters for HiSim
-    archetype_config_: archetype_config.ArcheTypeConfig = None
+    archetype_config_: Optional[archetype_config.ArcheTypeConfig] = None
 
     # stores the HiSim requests triggered in earlier iterations
     requisite_requests: List[TimeSeriesRequest] = dataclasses.field(

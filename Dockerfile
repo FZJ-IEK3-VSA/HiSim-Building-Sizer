@@ -1,4 +1,4 @@
-FROM python
+FROM python:3.10-slim
 
 WORKDIR /app
 
@@ -11,6 +11,9 @@ RUN apt-get install libhdf5-serial-dev -y
 COPY . .
 # Install building sizer
 RUN pip install .
+
+# This line can be used to install hisim from TestPyPI
+# RUN pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ hisim
 
 # Create a folder for the input files
 RUN mkdir /input
