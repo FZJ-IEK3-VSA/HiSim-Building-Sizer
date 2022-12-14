@@ -24,7 +24,7 @@ class SizingOptions:
     battery_capacity: List[float] = field(
         default_factory=lambda: [0.3, 0.6, 1.5, 3, 5, 7.5, 10, 15]
     )
-    buffer_capacity: List[float] = field(
+    buffer_volume: List[float] = field(
         default_factory=lambda: [200, 300, 500, 750, 1000, 1500, 3000]
     )
     # these lists define the layout of the individual vectors
@@ -69,6 +69,10 @@ class Individual:
         """
         individual = Individual()
         # randomly assign the bool attributes True or False
+        assert len(options.probabilities) == len(options.bool_attributes), (
+            "Invalid SizingOptions: members probabilities and bool_attributes have different length. "
+            "There must be one probability for each bool attribute."
+        )
         for probability in options.probabilities:
             dice = random.uniform(0, 1)  # random number between zero and one
             individual.bool_vector.append(dice < probability)

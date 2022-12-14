@@ -214,8 +214,6 @@ def building_sizer_iteration(
         request.requisite_requests, request.url, request.api_key
     )
 
-    options = individual_encoding.SizingOptions()
-
     # Get the relevant result files from all requisite requests and turn them into rated individuals
     rated_individuals = []
     for sim_config_str, result in results.items():
@@ -226,7 +224,7 @@ def building_sizer_iteration(
         rating = kpi_instance.get_kpi()
         system_config_instance: system_config.SystemConfig = system_config.SystemConfig.from_json(sim_config_str)  # type: ignore
         individual = individual_encoding.create_individual_from_config(
-            system_config_instance, options
+            system_config_instance, request.options
         )
         r = individual_encoding.RatedIndividual(individual, rating)
         rated_individuals.append(r)
@@ -255,7 +253,7 @@ def building_sizer_iteration(
             boolean_iterations=request.boolean_iterations,
             discrete_iterations=request.discrete_iterations,
         ),
-        options=options,
+        options=request.options,
     )
 
     # combine combine parents and children
@@ -272,7 +270,7 @@ def building_sizer_iteration(
     hisim_configs: List[system_config.SystemConfig] = []
     for individual in new_individuals:
         system_config_instance = individual_encoding.create_config_from_individual(
-            individual, options
+            individual, request.options
         )
         hisim_configs.append(system_config_instance)
 
