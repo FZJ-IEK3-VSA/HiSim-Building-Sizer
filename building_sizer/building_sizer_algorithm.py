@@ -130,7 +130,10 @@ def send_hisim_requests(
         assert reply.status not in [
             CalculationStatus.CALCULATIONFAILED,
             CalculationStatus.UNKNOWN,
-        ], f"Sending the following hisim request returned {reply.status}:\n{hisim_request.simulation_config}"
+        ], (
+            f"Sending the following hisim request returned {reply.status}:\n"
+            f"{hisim_request.simulation_config}\nError message: {reply.info}"
+        )
     return hisim_requests
 
 
