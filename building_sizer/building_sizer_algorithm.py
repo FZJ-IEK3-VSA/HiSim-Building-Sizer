@@ -12,9 +12,9 @@ import dataclasses
 from typing import Any, Dict, List, Optional, Tuple
 
 import dataclasses_json
-from hisim.modular_household.interface_configs import kpi_config  # type: ignore
 from hisim.modular_household.interface_configs import (  # type: ignore
     archetype_config,
+    kpi_config,
     modular_household_config,
     system_config,
 )
@@ -225,9 +225,9 @@ def building_sizer_iteration(
         # TODO: check if rating works
         kpi_instance: kpi_config.KPIConfig = kpi_config.KPIConfig.from_json(result.data["kpi_config.json"].decode())  # type: ignore
         rating = kpi_instance.get_kpi()
-        system_config_instance: system_config.SystemConfig = system_config.SystemConfig.from_json(sim_config_str)  # type: ignore
+        config: modular_household_config.ModularHouseholdConfig = modular_household_config.ModularHouseholdConfig.from_json(sim_config_str)  # type: ignore
         individual = individual_encoding.create_individual_from_config(
-            system_config_instance, request.options
+            config.system_config_, request.options
         )
         r = individual_encoding.RatedIndividual(individual, rating)
         rated_individuals.append(r)
@@ -237,7 +237,7 @@ def building_sizer_iteration(
         rated_individuals=rated_individuals, population_size=request.population_size
     )
 
-    # pass rated_individuals to genetic algorithm and receive list of new individual vectors back
+    # pass individuals to genetic algorithm and receive list of new individuals back
     parent_individuals = [ri.individual for ri in parents]
 
     # add random individuals to complete the population, in case too many individual were duplicates
