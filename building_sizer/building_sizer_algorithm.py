@@ -156,7 +156,7 @@ def send_building_sizer_request(
 
 
 def get_results_from_requisite_requests(
-    reqisite_requests: List[TimeSeriesRequest], url: str, api_key: str = ""
+    requisite_requests: List[TimeSeriesRequest], url: str, api_key: str = ""
 ) -> Dict[str, ResultDelivery]:
     """
     Collects the results from the HiSim requests sent in the previous iteration
@@ -165,7 +165,7 @@ def get_results_from_requisite_requests(
         request.simulation_config: client.request_time_series_and_wait_for_delivery(
             url, request, api_key
         )
-        for request in reqisite_requests
+        for request in requisite_requests
     }
 
 

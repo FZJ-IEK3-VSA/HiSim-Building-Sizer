@@ -95,7 +95,7 @@ def main():
     guid = ""  # .join(random.choices(string.ascii_uppercase + string.digits, k=10))
 
     # Set the parameters for the building sizer
-    hisim_version = "0.1.1"
+    hisim_version = ""
     building_sizer_version = ""
     options = individual_encoding.SizingOptions()
     # options.probabilities.extend([0.5])
