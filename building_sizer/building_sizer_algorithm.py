@@ -212,7 +212,6 @@ def building_sizer_iteration(
              the result of this iteration
     :rtype: Tuple[Optional[TimeSeriesRequest], Any]
     """
-    pass
     results = get_results_from_requisite_requests(
         request.requisite_requests, request.url, request.api_key
     )

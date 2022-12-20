@@ -1,6 +1,8 @@
 """Sends a building sizer request to the UTSP and waits until the calculation is finished."""
 
 import json
+import random
+import string
 from typing import Dict, Iterable, List
 
 import matplotlib.pyplot as plt  # type: ignore
@@ -76,7 +78,13 @@ def minimize_config(hisim_config: str) -> str:
 
     modular_hh_config = json.loads(hisim_config)
     sys_config = modular_hh_config["system_config_"]
-    keys = ["pv_included", "pv_peak_power", "battery_included", "battery_capacity"]
+    keys = [
+        "pv_included",
+        "pv_peak_power",
+        "battery_included",
+        "battery_capacity",
+        # "ev_included",
+    ]
     minimal = {k: sys_config[k] for k in keys}
     return json.dumps(minimal)
 
@@ -90,6 +98,8 @@ def main():
     hisim_version = "0.1.1"
     building_sizer_version = ""
     options = individual_encoding.SizingOptions()
+    # options.probabilities.extend([0.5])
+    # options.bool_attributes.extend(["ev_included"])
 
     # Create an initial simulation configuration for the building sizer
     initial_building_sizer_config = BuildingSizerRequest(
@@ -151,11 +161,9 @@ def main():
             building_sizer_config = BuildingSizerRequest.from_json(building_sizer_request.simulation_config)  # type: ignore
             building_sizer_iterations.append(building_sizer_config)
         print(f"Interim results: {building_sizer_result.result}")
-        all_ratings += (
-            f"{list(get_ratings_of_generation(building_sizer_config).values())}\n"
-        )
         # store the ratings of this generation
         generation = get_ratings_of_generation(building_sizer_config)
+        all_ratings += f"{list(generation.values())}\n"
         generations.append(generation)
         all_ratings_list.append(get_ratings(generation.values()))
         for bs_config, kpis in generation.items():
