@@ -16,8 +16,8 @@ test_requirements = ["pytest>=3"]
 
 
 setup(
-    author="Noah Pflugradt",
-    author_email="n.pflugradt@fz-juelich.de",
+    author="David Neuroth",
+    author_email="d.neuroth@fz-juelich.de",
     python_requires=">=3.5",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
@@ -30,12 +30,12 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
     ],
-    description="HiSim is a house infrastructure simulator",
+    description="The Building Sizer optimizes household infrastructure components in HiSim.",
     long_description=readme,
     install_requires=requirements,
     license="MIT license",
     include_package_data=True,
-    keywords="hisim",
+    keywords="building Sizer",
     name="building_sizer",
     packages=find_packages(include=["building_sizer", "building_sizer.*"]),
     setup_requires=setup_requirements,
