@@ -3,6 +3,7 @@
 import json
 import random
 import string
+from datetime import datetime
 from typing import Dict, Iterable, List
 
 import matplotlib.pyplot as plt  # type: ignore
@@ -136,6 +137,7 @@ def main():
     all_ratings = ""
     generations = []
     all_ratings_list = []
+    start = datetime.now()
     while not finished:
         # Wait until the request finishes and the results are delivered
         result = client.request_time_series_and_wait_for_delivery(
@@ -170,7 +172,7 @@ def main():
             print(minimize_config(bs_config), " - ", get_rating(kpis))
             print("---")
 
-    print("Finished")
+    print(f"Finished. Optimization took {datetime.now() - start}.")
     print(all_ratings)
     plot_ratings(all_ratings_list)
 
