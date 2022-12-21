@@ -45,6 +45,12 @@ class SizingOptions:
                 raise Exception(
                     f"Invalid vector attribute: SystemConfig has no member '{name}'"
                 )
+        for name in self.discrete_attributes:
+            if not hasattr(self, name):
+                raise Exception(
+                    f"Missing list of allowed values: SizingOptions has no member '{name} '"
+                    f"specifying allowed values for the attribute of the same name"
+                )
 
 
 @dataclass_json
