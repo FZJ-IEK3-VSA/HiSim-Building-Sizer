@@ -109,14 +109,24 @@ def crossover_conventional(
     vector_discrete_2 = parent2.discrete_vector[:]
 
     # select cross over point, which is not exactly the end or the beginning of the string
-    # TODO: account for different lengths in discrete and bool, bool may be longer than discrete one
-    pt = random.randint(1, len(vector_bool_1) - 1)
+    assert len(vector_bool_1) >= len(vector_discrete_1), "Bool vector of one parent is shorter than discrete vector"
+    crossover_pt = random.randint(1, len(vector_bool_1) - 1)
 
     # create children by cross over
-    child_bool_1 = vector_bool_1[:pt] + vector_bool_2[pt:]
-    child_bool_2 = vector_bool_2[:pt] + vector_bool_1[pt:]
-    child_discrete_1 = vector_discrete_1[:pt] + vector_discrete_2[pt:]
-    child_discrete_2 = vector_discrete_2[:pt] + vector_discrete_1[pt:]
+    child_bool_1 = vector_bool_1[:crossover_pt] + vector_bool_2[crossover_pt:]
+    child_bool_2 = vector_bool_2[:crossover_pt] + vector_bool_1[crossover_pt:]
+
+    if crossover_pt < len(vector_discrete_1):
+        # Additional discrete crossover only if the crossover point lies in the range of the bool_vector, where the bool-elements
+        # have associated discrete elements.
+        # Assumes that all bool elements with associated discrete elements are located in the beginning of the bool_vector.
+        child_discrete_1 = vector_discrete_1[:crossover_pt] + vector_discrete_2[crossover_pt:]
+        child_discrete_2 = vector_discrete_2[:crossover_pt] + vector_discrete_1[crossover_pt:]
+    else:
+        # no crossover among the discrete elements --> simply use the discrete vectors of the parents
+        child_discrete_1 = vector_discrete_1
+        child_discrete_2 = vector_discrete_2
+
     child1 = individual_encoding.Individual(
         bool_vector=child_bool_1, discrete_vector=child_discrete_1
     )
