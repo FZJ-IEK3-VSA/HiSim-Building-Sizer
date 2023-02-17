@@ -12,10 +12,10 @@
 Welcome to HiSim Building Sizer's documentation!
 ================================================
 
-The `HiSim Building Sizer` is a tool for optimizing the technical equipment of a building. The python package [HiSim](https://github.com/FZJ-IEK3-VSA/HiSim) is used to simulate and evaluate building systems for select configurations. Using an evolutionary algorithm, many possible building configurations are tested to identify the best combination of components.
+The `HiSim Building Sizer` is a tool for optimizing the technical equipment of a building. The python package `HiSim <https://github.com/FZJ-IEK3-VSA/HiSim>`_ is used to simulate and evaluate building systems for select configurations. Using an evolutionary algorithm, many possible building configurations are tested to identify the best combination of components.
 
 All building parameters available in HiSim can be varied in the Building Sizer, e.g., photovoltaic system peak power, battery capacity, or consideration of electric vehicles.
-Within the evolutionary algorithm, the distributed job manager [UTSP](https://github.com/FZJ-IEK3-VSA/UTSP_Client) is utilized to calculate all HiSim simulations of a single generation in parallel.
+Within the evolutionary algorithm, the distributed job manager `UTSP <https://github.com/FZJ-IEK3-VSA/UTSP_Client>`_ is utilized to calculate all HiSim simulations of a single generation in parallel.
 
 
 .. toctree::
