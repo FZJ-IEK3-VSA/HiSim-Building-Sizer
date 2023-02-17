@@ -1,10 +1,7 @@
-HiSim Package Structure
-=====
+building_sizer
+==============
 
 .. toctree::
    :maxdepth: 4
 
-   component
-   components
-   postprocessing
-   simulator
+   building_sizer

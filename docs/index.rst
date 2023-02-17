@@ -1,5 +1,5 @@
-.. Building Energy Simulator documentation master file, created by
-   sphinx-quickstart on Thu Oct  7 17:06:08 2021.
+.. HiSim Building Sizer documentation master file, created by
+   sphinx-quickstart on Fri Feb 17 12:50:51 2023.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
@@ -9,36 +9,21 @@
     :alt: Forschungszentrum Juelich Logo
     :align: right
 
-Welcome to HiSim's documentation!
-==========================================================
+Welcome to HiSim Building Sizer's documentation!
+================================================
 
-`HiSim` is an open-source Python-package for simulation in building energy systems, and has been under continuous development as part of the project PiegStrom. `HiSim` contains a time step simulation engine and an extendable framework for integration. The `HiSim` includes multiple components that as discrete elements define together the entire of a designed building energy system. Some of the current included components are Building, PV-System, Battery, Seasonal Hydrogen Storage, Gas Heater, Weather and Occupancy Load Profiles (See :numref:`scheme`)
+The `HiSim Building Sizer` is a tool for optimizing the technical equipment of a building. The python package [HiSim](https://github.com/FZJ-IEK3-VSA/HiSim) is used to simulate and evaluate building systems for select configurations. Using an evolutionary algorithm, many possible building configurations are tested to identify the best combination of components.
 
-.. _scheme:
+All building parameters available in HiSim can be varied in the Building Sizer, e.g., photovoltaic system peak power, battery capacity, or consideration of electric vehicles.
+Within the evolutionary algorithm, the distributed job manager [UTSP](https://github.com/FZJ-IEK3-VSA/UTSP_Client) is utilized to calculate all HiSim simulations of a single generation in parallel.
 
-.. figure:: _images/framework_diagram.svg
-   :width: 600
-   :align: center
-   :alt: None
-
-   HiSim Scheme
-
-The goal of this package to enable a free fast to implement investigation of different building energy system strategies considering the many load profiles, physical conditions and alternative components from fossil fuel sources. The user can also design their own components to be implemented in its own building energy system.
-
-Please, check the :ref:`installation` procedures to install `HiSim` in your local machine.
 
 .. toctree::
    :maxdepth: 1
    :caption: Contents:
 
-   installation
    tutorial
-   strategy
-   componentsworkflow
    modules
-
-
-
 
 Documentation Reference
 ==============================
@@ -50,7 +35,7 @@ Documentation Reference
 About Us
 ==================
 
-.. figure:: https://www.fz-juelich.de/SharedDocs/Bilder/IEK/IEK-3/Abteilungen2015/VSA_DepartmentPicture_2019-02-04_459x244_2480x1317.jpg?__blob=normal
+.. figure:: https://github.com/OfficialCodexplosive/README_Assets/blob/master/iek3-wide.png?raw=true
    :target: https://www.fz-juelich.de/iek/iek-3/DE/Home/home_node.html
    :align: center
    :alt: IEK-3 Team
@@ -61,24 +46,6 @@ We are the `Institute of Energy and Climate Research - Techno-economic Systems A
 
 License
 =========================================================
-HiSim is distributed under `MIT License <https://github.com/FZJ-IEK3-VSA/HiSim/blob/main/LICENSE>`_ .
+HiSim Building Sizer is distributed under `MIT License <https://github.com/FZJ-IEK3-VSA/HiSim-Building-Sizer/blob/main/LICENSE>`_ .
 
-Copyright (C) 2020-2021 Noah Pflugradt, Vitor Zago, Frank Burkard, Tjarko Tjaden, Leander Kotzur, Detlef Stolten
-
-Contribution
-============================================================
-
-This software is developed together with the **Hochschule Emden/Leer** inside the project `Piegstrom`.
-
-Acknowledgement
-================================================
-
-This work was supported by the Helmholtz Association under the Joint Initiative `Energy System 2050 - A Contribution of the Research Field Energy <https://www.helmholtz.de/en/research/energy/energy_system_2050/>`_.
-
-.. _iek3link:
-
-.. figure:: https://www.helmholtz.de/fileadmin/user_upload/05_aktuelles/Marke_Design/logos/HG_LOGO_S_ENG_RGB.jpg
-   :target: https://www.fz-juelich.de/iek/iek-3/EN/Home/home_node.html
-   :align: left
-   :width: 200
-   :alt: Helmholtz Logo
+Copyright (C) 2022 FZ Jülich - IEK 3
