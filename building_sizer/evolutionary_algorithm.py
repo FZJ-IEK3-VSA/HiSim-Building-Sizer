@@ -1,3 +1,9 @@
+""" 
+Evolutionary algorithms evaluate the fitness of various individuals of a population - and inspired by biology - combine them randomly to a new generation.  The fitter the individuals the better the chance to propagate.
+In this context an individual would be a specified building configurations for HiSIM calls and the new generation is built by combination and variation of parameters in the building configuration.
+This file incoporates one step of the evolutionary algorithm creating a new population based on a rated one. In addition, the file includes all necesary functions for the evaluation step: mutation, crossover, selection,... .
+"""
+
 # -*- coding: utf-8 -*-
 from hisim.modular_household.interface_configs import system_config  # type: ignore
 
@@ -74,6 +80,24 @@ def complete_population(
     population_size: int,
     options: individual_encoding.SizingOptions,
 ) -> List[individual_encoding.Individual]:
+    """
+    Adds random individuals to population, if the population size is too small.
+    
+    Parameters
+    ----------
+    original_parents : List[individual_encoding.Individual]
+        List of individuals of original population.
+    population_size: int
+        Number of individuals, the population should finally contain.
+    options: individual_encoding.SizingOptions:
+        Contains all available options for the sizing of each component.
+    
+    Returns
+    -------
+    completed_population: List[individual_encoding.Individual]
+        List of individuals of the completed population.
+        
+    """
     len_parents = len(original_parents)
     for _ in range(population_size - len_parents):
         individual = individual_encoding.Individual.create_random_individual(
@@ -87,7 +111,7 @@ def crossover_conventional(
     parent1: individual_encoding.Individual, parent2: individual_encoding.Individual
 ) -> Tuple[individual_encoding.Individual, individual_encoding.Individual]:
     """
-    cross over: exchange parts of bitstring by randomly generated index
+    Combines two individuals (parents) to two new individuals (children). This is done by randomly generating an index and exchanging parts of the bitstrings, which describe individuals.
 
     Parameters
     ----------
@@ -147,7 +171,7 @@ def mutation_bool(
     parent: individual_encoding.Individual,
 ) -> individual_encoding.Individual:
     """
-    Mutation: changing bit value at one position in boolean vector.
+    Slightly changes individual by randomly changing one bit of the boolean bitstring, which describes an individual.
 
     Parameters
     ----------
@@ -172,15 +196,14 @@ def mutation_discrete(
     parent: individual_encoding.Individual, options: individual_encoding.SizingOptions
 ) -> individual_encoding.Individual:
     """
-    Mutation: changing bit value at one position in discrete vector.
+    Slightly changes individual by randomly changing one bit of the discrete bitstring, which describes an individual.
 
     Parameters
     ----------
     parent : individual_encoding.Individual
         Encoding of parent for mutation.
     options : individual_encoding.SizingOptions
-        Instance of dataclass sizing options.
-        It contains a list of all available options for sizing of each component.
+        Contains all available options for the sizing of each component.
 
     Returns
     -------
@@ -207,7 +230,7 @@ def evolution(
     options: individual_encoding.SizingOptions,
 ) -> List[individual_encoding.Individual]:
     """
-    evolution step of the genetic algorithm
+    One step of the evolutionary algorithm (evolution) not including the selection process. Random numbers are generated to decide if cross over, mutation or nothing is considered for the creation of a new generation.
 
     Parameters
     ----------
@@ -219,6 +242,9 @@ def evolution(
         Mutation probability.
     mode : str
         Mode 'bool' for boolean variation and 'discrete' for discrete variation.
+    options: individual_encoding.SizingOptions
+        Contains all available options for the sizing of each component.
+
 
     Returns
     -------

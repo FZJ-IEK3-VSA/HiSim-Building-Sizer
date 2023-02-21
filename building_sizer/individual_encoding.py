@@ -1,3 +1,9 @@
+""" 
+Translation of HiSIM system configurations to boolean and discrete vectors, which can be treated by the evolutionary algorithms, and back.
+Classes to gather information needed for the Translator as well as combine informations describing individuals.
+(HiSIM system config, boolean and discrete vectors as well as fitness or rating)
+"""
+
 import json
 import random
 from dataclasses import dataclass, field
@@ -69,9 +75,12 @@ class Individual:
         Parameters
         ----------
         options: SizingOptions
-            Instance of dataclass sizing options.
-            It contains a list of all available options for sizing of each component.
+            Contains all available options for the sizing of each component.
 
+        Returns
+        -------
+        individual: Individual
+            Individual with bool and discrete vector.
         """
         individual = Individual()
         # randomly assign the bool attributes True or False
@@ -102,7 +111,20 @@ class RatedIndividual:
 def create_individual_from_config(
     system_config: SystemConfig, options: SizingOptions
 ) -> Individual:
-    """Creates discrete and boolean vector from given SystemConfig."""
+    """Creates discrete and boolean vector from given SystemConfig.
+
+    Parameters
+    ----------
+    system_config: SystemConfig
+        Household System configuration - input to HiSIM simulation.
+    options: SizingOptions
+        Contains all available options for the sizing of each component.
+
+    Returns
+    -------
+    individual: Individual
+        Individual with bool and discrete vector.
+    """
     bool_vector: List[bool] = [
         getattr(system_config, name) for name in options.bool_attributes
     ]
@@ -118,6 +140,18 @@ def create_config_from_individual(
     """
     Creates a SystemConfig object from the bool and discrete vectors of an
     Individual object. For this, the SizingOptions object is needed.
+
+    Parameters
+    ----------
+    individual: Individual
+        Individual with bool and discrete vector.
+    options: SizingOptions
+        Contains all available options for the sizing of each component.
+
+    Returns
+    -------
+    system_config: SystemConfig
+        Household System configuration - input to HiSIM simulation.
     """
     # create a default SystemConfig object
     system_config = SystemConfig()
@@ -141,6 +175,18 @@ def create_random_system_configs(
 ) -> List[SystemConfig]:
     """
     Creates the desired number of random SystemConfig objects
+
+    Parameters
+    ----------
+    number: int
+        Number of individuals in a population.
+    options: SizingOptions
+        Contains all available options for the sizing of each component.
+
+    Returns
+    -------
+    hisim_configs: List[SystemConfig]
+        List of household system configurations - providing input to HiSIM simulations.
     """
     hisim_configs = []
     for _ in range(number):
@@ -153,5 +199,12 @@ def create_random_system_configs(
 
 
 def save_system_configs_to_file(configs: List[str]) -> None:
+    """Writes List of system configurations to json file.
+    
+    Parameters
+    ----------
+    configs: List[str]
+        List of system configurations, in string formaat.
+    """
     with open("./random_system_configs.json", "w", encoding="utf-8") as f:
         json.dump(configs, f)
