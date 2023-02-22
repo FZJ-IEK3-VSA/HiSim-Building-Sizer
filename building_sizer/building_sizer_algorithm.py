@@ -50,19 +50,19 @@ class BuildingSizerRequest:
     :param remaining_iterations: number of iterations the evolutionary algorithm should have
     :type remaining_iterations: int
     :param boolean_iterations: number of iterations where the decision of which components to use is evaluated.
-    :tpye boolean_iterations: int
+    :type boolean_iterations: int
     :param discrete_iterations: number of iterations where the decision of which size the components should have is evaluated
-    :tpye discrete_iterations: int
+    :type discrete_iterations: int
     :param population_sizer: number of individuals considered in each population
-    :tpye population_size: int
-    :param crossover_probabiltiy: number of individuals considered in each population
-    :tpye crossover_probabiltiy: float
-    :param mutation_probabiltiy: number of individuals considered in each population
-    :tpye mutation_probabiltiy: float
-    :param options: number of individuals considered in each population
-    :tpye options: individual_encoding.SizingOptions
+    :type population_size: int
+    :param crossover_probabiltiy: probability for each individual for doing crossover with the next individual
+    :type crossover_probabiltiy: float
+    :param mutation_probabiltiy: probability for each individual for mutating
+    :type mutation_probabiltiy: float
+    :param options: SizingOptions object, containing information for decoding and encoding individuals
+    :type options: individual_encoding.SizingOptions
     :archetype_config_: builing parameters of HiSIM (independet of system config, climate, house type, etc. need to be defined)
-    :tpye archetype_config_: archetype_config.ArcheTypeConfig
+    :type archetype_config_: archetype_config.ArcheTypeConfig
     """
 
     url: str
@@ -135,7 +135,7 @@ def send_hisim_requests(
 ) -> List[TimeSeriesRequest]:
     """
     Creates and sends one time series request to the utsp for every passed hisim configuration
-    
+
     :param system_confgis: list of HiSIM system configurations (individuals)
     :type system_configs: List[system_config.SystemConfig]
     :param request: request to the Building Sizer
@@ -247,8 +247,8 @@ def trigger_next_iteration(
 def decide_on_mode(
     iteration: int, boolean_iterations: int, discrete_iterations: int
 ) -> str:
-    """ Decides if iteration is boolean (which technology is included) or discrete (what size does the technology have).
-    
+    """Decides if iteration is boolean (which technology is included) or discrete (what size does the technology have).
+
     :param iteration: building sizer iteration
     :type iteration: int
     :param boolean_iterations: number of subsequent boolean iterations
@@ -351,7 +351,7 @@ def building_sizer_iteration(
 
 
 def main():
-    """ One iteration in the building sizer. """
+    """One iteration in the building sizer."""
 
     # Read the request file
     input_path = "/input/request.json"
