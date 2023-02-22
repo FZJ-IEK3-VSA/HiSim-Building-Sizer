@@ -103,6 +103,14 @@ def send_hisim_requests(
 ) -> List[TimeSeriesRequest]:
     """
     Creates and sends one time series request to the utsp for every passed hisim configuration
+    
+    :param system_confgis: list of HiSIM system configurations (individuals)
+    :type system_configs: List[system_config.SystemConfig]
+    :param request: request to the Building Sizer
+    :type request: BuildingSizerRequest
+    :return: list of HiSIM requests
+    :rtype: List[TimeSeriesRequest]
+
     """
     # Determine the provider name for the hisim request
     provider_name = "hisim"
@@ -142,7 +150,14 @@ def send_building_sizer_request(
     request: BuildingSizerRequest, hisim_requests: List[TimeSeriesRequest]
 ) -> TimeSeriesRequest:
     """
-    Sends the request for the next building_sizer iteration to the UTSP, including the previously sent hisim requests
+    Sends the request for the next building_sizer iteration to the UTSP, including the previously sent hisim requests.
+
+    :param request: request to the Building Sizer
+    :type request: BuildingSizerRequest
+    :param hisim_requests: list of HiSIM requests
+    :type hisim_requests: List[TimeSeriesRequest]
+    :return: request to the building sizer
+    :rtype: TimeSeriesRequest
     """
     subsequent_request_config = request.create_subsequent_request(hisim_requests)
     config_json: str = subsequent_request_config.to_json()  # type: ignore
@@ -160,7 +175,16 @@ def get_results_from_requisite_requests(
     requisite_requests: List[TimeSeriesRequest], url: str, api_key: str = ""
 ) -> Dict[str, ResultDelivery]:
     """
-    Collects the results from the HiSim requests sent in the previous iteration
+    Collects the results from the HiSim requests sent in the previous iteration.
+
+    :param requisite_requests: List of previous HiSIM requests
+    :type requisite_requests: List[TimeSeriesRequest]
+    :param url: url for connection to the UTSP
+    :type url: str
+    :param api_key: password for the connection to the UTSP
+    :type api_key: str
+    :return: dictionary of processed hisim requests (HiSIM results)
+    :rtype: Dict[str, ResultDelivery]
     """
     return {
         request.simulation_config: client.request_time_series_and_wait_for_delivery(
@@ -191,6 +215,17 @@ def trigger_next_iteration(
 def decide_on_mode(
     iteration: int, boolean_iterations: int, discrete_iterations: int
 ) -> str:
+    """ Decides if iteration is boolean (which technology is included) or discrete (what size does the technology have).
+    
+    :param iteration: building sizer iteration
+    :type iteration: int
+    :param boolean_iterations: number of subsequent boolean iterations
+    :type boolean_iterations: int
+    :param discrete_iterations: number of subsequent discrete iterations
+    :type discrete_iterations: int
+    :return: iteration mode: "bool" or "discrete"
+    :rtype: str
+    """
     iteration_in_subiteration = iteration % (boolean_iterations + discrete_iterations)
     if iteration_in_subiteration > discrete_iterations:
         return "bool"
@@ -284,6 +319,8 @@ def building_sizer_iteration(
 
 
 def main():
+    """ One iteration in the building sizer. """
+
     # Read the request file
     input_path = "/input/request.json"
     with open(input_path) as input_file:

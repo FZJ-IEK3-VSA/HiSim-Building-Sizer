@@ -72,15 +72,11 @@ class Individual:
     def create_random_individual(options: SizingOptions) -> "Individual":
         """Creates random individual.
 
-        Parameters
-        ----------
-        options: SizingOptions
-            Contains all available options for the sizing of each component.
+        :param options: Contains all available options for the sizing of each component.
+        :tpye options: SizingOptions
 
-        Returns
-        -------
-        individual: Individual
-            Individual with bool and discrete vector.
+        :return: Individual with bool and discrete vector.
+        :rtype individual: Individual
         """
         individual = Individual()
         # randomly assign the bool attributes True or False
@@ -113,17 +109,13 @@ def create_individual_from_config(
 ) -> Individual:
     """Creates discrete and boolean vector from given SystemConfig.
 
-    Parameters
-    ----------
-    system_config: SystemConfig
-        Household System configuration - input to HiSIM simulation.
-    options: SizingOptions
-        Contains all available options for the sizing of each component.
+    :parameter system_config: Household System configuration - input to HiSIM simulation.
+    :type system_config: SystemConfig
+    :parameter options: Contains all available options for the sizing of each component.
+    :type options: SizingOptions
 
-    Returns
-    -------
-    individual: Individual
-        Individual with bool and discrete vector.
+    :return: Individual with bool and discrete vector.
+    :rtype: Individual
     """
     bool_vector: List[bool] = [
         getattr(system_config, name) for name in options.bool_attributes
@@ -141,17 +133,13 @@ def create_config_from_individual(
     Creates a SystemConfig object from the bool and discrete vectors of an
     Individual object. For this, the SizingOptions object is needed.
 
-    Parameters
-    ----------
-    individual: Individual
-        Individual with bool and discrete vector.
-    options: SizingOptions
-        Contains all available options for the sizing of each component.
+    :param individual: Individual with bool and discrete vector.
+    :tpye individual: Individual
+    :param options: Contains all available options for the sizing of each component.
+    :type options: SizingOptions
 
-    Returns
-    -------
-    system_config: SystemConfig
-        Household System configuration - input to HiSIM simulation.
+    :return: Household System configuration - input to HiSIM simulation.
+    :rtype: SystemConfig
     """
     # create a default SystemConfig object
     system_config = SystemConfig()
@@ -174,19 +162,14 @@ def create_random_system_configs(
     number: int, options: SizingOptions
 ) -> List[SystemConfig]:
     """
-    Creates the desired number of random SystemConfig objects
+    Creates the desired number of random individuals (HiSIM system configurations).
 
-    Parameters
-    ----------
-    number: int
-        Number of individuals in a population.
-    options: SizingOptions
-        Contains all available options for the sizing of each component.
-
-    Returns
-    -------
-    hisim_configs: List[SystemConfig]
-        List of household system configurations - providing input to HiSIM simulations.
+    :param number: number of individuals in a population
+    :type number: int
+    :param options: Contains all available options for the sizing of each component.
+    :type options: SizingOptions
+    :return: list of HiSIM system configurations providing input to HiSIM simulations
+    :rtype: hisim_configs: List[SystemConfig]
     """
     hisim_configs = []
     for _ in range(number):
@@ -201,10 +184,8 @@ def create_random_system_configs(
 def save_system_configs_to_file(configs: List[str]) -> None:
     """Writes List of system configurations to json file.
     
-    Parameters
-    ----------
-    configs: List[str]
-        List of system configurations, in string formaat.
+    :param congigs: List of system configurations, in string formaat.
+    :type configs: List[str]
     """
     with open("./random_system_configs.json", "w", encoding="utf-8") as f:
         json.dump(configs, f)
