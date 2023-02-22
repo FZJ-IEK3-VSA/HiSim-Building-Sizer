@@ -46,13 +46,13 @@ class BuildingSizerRequest:
     :param bulding_sizer_version: Version of the building sizer
     :type building_sizer_version: str
     :param hisim_version: Version of HiSIM the building sizer calls upon
-    :type building_sizer_version: str
+    :type hisim_version: str
     :param remaining_iterations: number of iterations the evolutionary algorithm should have
     :type remaining_iterations: int
     :param boolean_iterations: number of iterations where the decision of which components to use is evaluated.
     :tpye boolean_iterations: int
     :param discrete_iterations: number of iterations where the decision of which size the components should have is evaluated
-    :tpye boolean_iterations: int
+    :tpye discrete_iterations: int
     :param population_sizer: number of individuals considered in each population
     :tpye population_size: int
     :param crossover_probabiltiy: number of individuals considered in each population
@@ -62,7 +62,7 @@ class BuildingSizerRequest:
     :param options: number of individuals considered in each population
     :tpye options: individual_encoding.SizingOptions
     :archetype_config_: builing parameters of HiSIM (independet of system config, climate, house type, etc. need to be defined)
-    :tpye population_size: archetype_config.ArcheTypeConfig
+    :tpye archetype_config_: archetype_config.ArcheTypeConfig
     """
 
     url: str
