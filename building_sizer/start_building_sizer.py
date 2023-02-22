@@ -64,8 +64,8 @@ def get_ratings_of_generation(
 
 def get_rating(kpi: str) -> float:
     """Computes the fitness or rating of one individual (hisim configuration).
-    
-    :kpi: List of key performance indicatiors - results of HiSIM simulation. 
+
+    :kpi: List of key performance indicatiors - results of HiSIM simulation.
     :type kpi: str
     :return: fitness or rating of the individual (hisim configuration)
     :rtype: float
@@ -76,8 +76,8 @@ def get_rating(kpi: str) -> float:
 
 def get_ratings(kpis: Iterable[str]) -> List[float]:
     """Computes the fitness or rating of multiple individuals (hisim configurations).
-    
-    :kpis: List of HiSIM simulation results (key performance indicatiors). 
+
+    :kpis: List of HiSIM simulation results (key performance indicatiors).
     :type kpis: str
     :return: list of fitness or rating of the individuals (hisim configurations)
     :rtype: List[float]
@@ -119,13 +119,13 @@ def main():
     :param bulding_sizer_version: Version of the building sizer
     :type building_sizer_version: str
     :param hisim_version: Version of HiSIM the building sizer calls upon
-    :type building_sizer_version: str
+    :type hisim_version: str
     :param remaining_iterations: number of iterations the evolutionary algorithm should have
     :type remaining_iterations: int
     :param boolean_iterations: number of iterations where the decision of which components to use is evaluated.
     :tpye boolean_iterations: int
     :param discrete_iterations: number of iterations where the decision of which size the components should have is evaluated
-    :tpye boolean_iterations: int
+    :tpye discrete_iterations: int
     :param population_sizer: number of individuals considered in each population
     :tpye population_size: int
     :param crossover_probabiltiy: number of individuals considered in each population
@@ -135,7 +135,7 @@ def main():
     :param options: number of individuals considered in each population
     :tpye options: individual_encoding.SizingOptions
     :archetype_config_: builing parameters of HiSIM (independet of system config, climate, house type, etc. need to be defined)
-    :tpye population_size: archetype_config.ArcheTypeConfig
+    :tpye archetype_config_: archetype_config.ArcheTypeConfig
     """
 
     guid = ""  # .join(random.choices(string.ascii_uppercase + string.digits, k=10))
@@ -227,7 +227,7 @@ def main():
 def create_table(generations):
     """
     Writes csv containing all kpi values (HiSIM results) of all individuals (HiSim configuration) of each generation (iteration).
-    
+
     :param generation: List of all individuals (HiSIM configurations) and KPIs (HiSIM results) in each generation (iteartion)
     :type generation: List[Dict[str, str]]
     """

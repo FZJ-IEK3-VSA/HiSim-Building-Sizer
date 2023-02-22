@@ -22,7 +22,21 @@ class BuildingSizerException(Exception):
 @dataclass
 class SizingOptions:
 
-    """Contains all relevant information to encode and decode system configs."""
+    """Contains all relevant information to encode and decode system configs.
+
+    :param pv_peak_power: list of all sizes of PV panels considered in the optimization given in Wp
+    :type pv_peak_power: List[flaot]
+    :param battery_capacity: list of all sizes of batteries considered in the optimization given in kWh
+    :type battery_capacity: List[flaot]
+    :param buffer_volume: list of all sizes of buffer storages considered in the optimization given in multiples of the default
+    :type buffer_volume: List[flaot]
+    :param bool_attributes: list of technologies (boolean attributes) considered in the optimization
+    :type bool_attributes: List[str]
+    :param discrete_attributes: list of technologies with different sizing options (discrete attributes) used within the optimization
+    :type discrete_attributes: List[str]
+    :param probabilities: defines probability of each component to be considered at the initial configurations
+    :type probabilities: List[float]
+    """
 
     pv_peak_power: List[float] = field(
         default_factory=lambda: [6e2, 1.2e3, 1.8e3, 3e3, 6e3, 9e3, 12e3, 15e3]
@@ -30,9 +44,7 @@ class SizingOptions:
     battery_capacity: List[float] = field(
         default_factory=lambda: [0.3, 0.6, 1.5, 3, 5, 7.5, 10, 15]
     )
-    buffer_volume: List[float] = field(
-        default_factory=lambda: [200, 300, 500, 750, 1000, 1500, 3000]
-    )
+    buffer_volume: List[float] = field(default_factory=lambda: [1, 2, 5, 10])
     # these lists define the layout of the individual vectors
     bool_attributes: List[str] = field(
         default_factory=lambda: ["pv_included", "battery_included"]
@@ -63,7 +75,12 @@ class SizingOptions:
 @dataclass
 class Individual:
 
-    """System config as numerical vectors."""
+    """System config as numerical vectors.
+
+    :param bool_vector: encoding of the individual (HiSIM configuration) of the boolean part - each digit decides if related technology is included or not
+    :type bool_vector: List[bool]
+    :param discrete_vector: encoding of the individual (HiSIM configuration) of the discrete part - each digit describes the size of the considered technology
+    """
 
     bool_vector: List[bool] = field(default_factory=list)
     discrete_vector: List[float] = field(default_factory=list)
@@ -98,9 +115,11 @@ class Individual:
 @dataclass
 class RatedIndividual:
 
-    """System config as numerical vectors with assosiated fitness function value."""
+    """System config as numerical vectors with associated fitness function value."""
 
+    #: the individual object, containing a system config encoded as numerical vectors
     individual: Individual
+    #: the fitness function value of the individual
     rating: float
 
 
@@ -183,7 +202,7 @@ def create_random_system_configs(
 
 def save_system_configs_to_file(configs: List[str]) -> None:
     """Writes List of system configurations to json file.
-    
+
     :param congigs: List of system configurations, in string formaat.
     :type configs: List[str]
     """
