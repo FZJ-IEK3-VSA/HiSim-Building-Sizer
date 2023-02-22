@@ -64,8 +64,8 @@ def get_ratings_of_generation(
 
 def get_rating(kpi: str) -> float:
     """Computes the fitness or rating of one individual (hisim configuration).
-    
-    :kpi: List of key performance indicatiors - results of HiSIM simulation. 
+
+    :kpi: List of key performance indicatiors - results of HiSIM simulation.
     :type kpi: str
     :return: fitness or rating of the individual (hisim configuration)
     :rtype: float
@@ -76,8 +76,8 @@ def get_rating(kpi: str) -> float:
 
 def get_ratings(kpis: Iterable[str]) -> List[float]:
     """Computes the fitness or rating of multiple individuals (hisim configurations).
-    
-    :kpis: List of HiSIM simulation results (key performance indicatiors). 
+
+    :kpis: List of HiSIM simulation results (key performance indicatiors).
     :type kpis: str
     :return: list of fitness or rating of the individuals (hisim configurations)
     :rtype: List[float]
@@ -227,7 +227,7 @@ def main():
 def create_table(generations):
     """
     Writes csv containing all kpi values (HiSIM results) of all individuals (HiSim configuration) of each generation (iteration).
-    
+
     :param generation: List of all individuals (HiSIM configurations) and KPIs (HiSIM results) in each generation (iteartion)
     :type generation: List[Dict[str, str]]
     """

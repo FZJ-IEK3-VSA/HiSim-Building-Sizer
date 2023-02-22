@@ -27,8 +27,7 @@ from utspclient.datastructures import (
     TimeSeriesRequest,
 )
 
-from building_sizer import evolutionary_algorithm as evo_alg
-from building_sizer import individual_encoding
+from building_sizer import individual_encoding, evolutionary_algorithm as evo_alg
 
 
 @dataclasses_json.dataclass_json
@@ -39,8 +38,7 @@ class BuildingSizerRequest:
     a single building sizer iteration. Can be used to create the request object
     for the subsequent iteration.
 
-    :param url: url for connection to the UTSP
-    :type url: str
+    :param str url: url for connection to the UTSP
     :param api_key: password for the connection to the UTSP
     :type api_key: str
     :param bulding_sizer_version: Version of the building sizer
@@ -61,8 +59,7 @@ class BuildingSizerRequest:
     :type mutation_probabiltiy: float
     :param options: SizingOptions object, containing information for decoding and encoding individuals
     :type options: individual_encoding.SizingOptions
-    :archetype_config_: builing parameters of HiSIM (independet of system config, climate, house type, etc. need to be defined)
-    :type archetype_config_: archetype_config.ArcheTypeConfig
+    :param archetype_config_ archetype_config_: builing parameters of HiSIM (independet of system config, climate, house type, etc. need to be defined)
     """
 
     url: str
