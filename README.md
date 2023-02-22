@@ -2,7 +2,7 @@
 
 # HiSim Building Sizer
 
-The HiSim Building Sizer is a tool supporting the choice and sizing of technical equipment of a building. For example the best size for batteries can be chosen via the building sizer or investment decision in electric vehicles or heat pumps can be supported. The decisions are based on heuristic optimization (evolutionary algorithms), which call upon simulations of the python package [HiSim](https://github.com/FZJ-IEK3-VSA/HiSim). HiSIM simulates and total energy curves for selected building configurations.
+The HiSim Building Sizer is a tool supporting the choice and sizing of technical equipment of a building. For example the best size for batteries can be chosen via the building sizer or investment decisions in electric vehicles or heat pumps can be supported. The decisions are based on heuristic optimization (evolutionary algorithms), which call upon simulations of the python package [HiSim](https://github.com/FZJ-IEK3-VSA/HiSim). HiSIM simulates total energy curves for selected building configurations and evaluates key performance indicators like self consumption rates or autarky rates based on them.
 All building parameters available in HiSim can be varied in the Building Sizer, e.g., photovoltaic system peak power, battery capacity, the consideration of electric vehicles and heat pumps or smart control of dish washers and washing machines.
 Within the evolutionary algorithm, the distributed job manager [UTSP](https://github.com/FZJ-IEK3-VSA/UTSP_Client) is utilized to calculate all HiSim simulations of a single generation in parallel.
 
