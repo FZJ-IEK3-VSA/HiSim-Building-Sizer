@@ -20,7 +20,7 @@ from building_sizer.building_sizer_algorithm import (
 
 # Define URL and API key for the UTSP server
 URL = "http://134.94.131.167:443/api/v1/profilerequest"
-API_KEY = "OrjpZY93BcNWw8lKaMp0BEchbCc"
+API_KEY = ""
 
 
 def plot_ratings(ratings: List[List[float]]) -> None:
@@ -44,11 +44,11 @@ def get_ratings_of_generation(
     building_sizer_config: BuildingSizerRequest,
 ) -> Dict[str, str]:
     """
-    Returns the performance ratings for one generation of HiSim configurations
+    Returns the KPIs (results of HiSIM calculation) for one generation of HiSim configurations
 
     :param building_sizer_config: the building sizer request for the generation
     :type building_sizer_config: BuildingSizerRequest
-    :return: a dict mapping each HiSim configuration to its ratings
+    :return: a dict mapping each HiSim configuration to its KPIs
     :rtype: Dict[float]
     """
     hisim_results = building_sizer_algorithm.get_results_from_requisite_requests(
@@ -63,10 +63,26 @@ def get_ratings_of_generation(
 
 
 def get_rating(kpi: str) -> float:
+    """Computes the fitness or rating of one individual (hisim configuration).
+    
+    :kpi: List of key performance indicatiors - results of HiSIM simulation. 
+    :type kpi: str
+    :return: fitness or rating of the individual (hisim configuration)
+    :rtype: float
+    """
+
     return kpi_config.KPIConfig.from_json(kpi).get_kpi()  # type: ignore
 
 
 def get_ratings(kpis: Iterable[str]) -> List[float]:
+    """Computes the fitness or rating of multiple individuals (hisim configurations).
+    
+    :kpis: List of HiSIM simulation results (key performance indicatiors). 
+    :type kpis: str
+    :return: list of fitness or rating of the individuals (hisim configurations)
+    :rtype: List[float]
+    """
+
     return [get_rating(s) for s in kpis]
 
 
@@ -74,6 +90,10 @@ def minimize_config(hisim_config: str) -> str:
     """
     Helper method for testing, that extracts only the relevant fields of a system config
     to print them in a clearer way.
+    :param hisim_config: a system configuration of HiSIM
+    :type hisim_config: str
+    :return: a system configuration of HiSIM containing only the parameters changing within the evolutionary algorithm
+    :rtype: str
     """
     import json
 
@@ -91,8 +111,33 @@ def minimize_config(hisim_config: str) -> str:
 
 
 def main():
-    # For testing: create a random id to enforce recalculation for each request.
-    # For production use, this can be left out.
+    """
+    Default function to call the building sizer.
+
+    Hard coded Input Parameters
+    ---------------------------
+    :param bulding_sizer_version: Version of the building sizer
+    :type building_sizer_version: str
+    :param hisim_version: Version of HiSIM the building sizer calls upon
+    :type building_sizer_version: str
+    :param remaining_iterations: number of iterations the evolutionary algorithm should have
+    :type remaining_iterations: int
+    :param boolean_iterations: number of iterations where the decision of which components to use is evaluated.
+    :tpye boolean_iterations: int
+    :param discrete_iterations: number of iterations where the decision of which size the components should have is evaluated
+    :tpye boolean_iterations: int
+    :param population_sizer: number of individuals considered in each population
+    :tpye population_size: int
+    :param crossover_probabiltiy: number of individuals considered in each population
+    :tpye crossover_probabiltiy: float
+    :param mutation_probabiltiy: number of individuals considered in each population
+    :tpye mutation_probabiltiy: float
+    :param options: number of individuals considered in each population
+    :tpye options: individual_encoding.SizingOptions
+    :archetype_config_: builing parameters of HiSIM (independet of system config, climate, house type, etc. need to be defined)
+    :tpye population_size: archetype_config.ArcheTypeConfig
+    """
+
     guid = ""  # .join(random.choices(string.ascii_uppercase + string.digits, k=10))
 
     # Set the parameters for the building sizer
@@ -180,6 +225,12 @@ def main():
 
 
 def create_table(generations):
+    """
+    Writes csv containing all kpi values (HiSIM results) of all individuals (HiSim configuration) of each generation (iteration).
+    
+    :param generation: List of all individuals (HiSIM configurations) and KPIs (HiSIM results) in each generation (iteartion)
+    :type generation: List[Dict[str, str]]
+    """
     data: dict = {}
     for iteration, generation in enumerate(generations):
         for config, kpi in generation.items():

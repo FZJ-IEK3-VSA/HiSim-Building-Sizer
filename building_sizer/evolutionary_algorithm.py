@@ -1,3 +1,9 @@
+""" 
+Evolutionary algorithms evaluate the fitness of various individuals of a population - and inspired by biology - combine them randomly to a new generation.  The fitter the individuals the better the chance to propagate.
+In this context an individual would be a specified building configurations for HiSIM calls and the new generation is built by combination and variation of parameters in the building configuration.
+This file incoporates one step of the evolutionary algorithm creating a new population based on a rated one. In addition, the file includes all necesary functions for the evaluation step: mutation, crossover, selection,... .
+"""
+
 # -*- coding: utf-8 -*-
 from hisim.modular_household.interface_configs import system_config  # type: ignore
 
@@ -13,16 +19,12 @@ def unique(
     """
     Compares all individuals and deletes duplicates.
 
-    Parameters
-    ----------
-    rated_individuals : List[individual_encoding.RatedIndividual]
-        List of all individuals
-    population_size : int
-        Amount of individuals to be selected
-
-    Returns
-    -------
-    selected_individuals : List[individual_encoding.RatedIndividual]
+    :param rated_individuals: list of all individuals (HiSIM configurations) and KPIs (HiSIM results)
+    :type rated_individuals: List[individual_encoding.RatedIndividual]
+    :param population_size: amount of individuals to be selected
+    :tpye population_size: int
+    :return: shortened list of individuals (HiSIM configurations) and KPIs (HiSIM results) 
+    :rtype: List[individual_encoding.RatedIndividual]
 
     """
     len_individuals = len(individuals)
@@ -48,16 +50,12 @@ def selection(
     """
     Selects best individuals.
 
-    Parameters
-    ----------
-    rated_individuals : List[individual_encoding.RatedIndividual]
-        List of all individuals
-    population_size : int
-        Amount of individuals to be selected
-
-    Returns
-    -------
-    selected_individuals : List[individual_encoding.RatedIndividual]
+    :param rated_individuals: list of all individuals
+    :type rated_individuals: List[individual_encoding.RatedIndividual]
+    :param population_size: amount of individuals to be selected
+    :type population_size: int
+    :return: list of individuals with best rating (fitness)
+    :rtype: List[individual_encoding.RatedIndividual]
 
     """
     # Sort individuals decendingly using their rating
@@ -74,6 +72,19 @@ def complete_population(
     population_size: int,
     options: individual_encoding.SizingOptions,
 ) -> List[individual_encoding.Individual]:
+    """
+    Adds random individuals to population, if the population size is too small.
+    
+    :param original_parents: list of individuals of original population
+    :type original_parents: List[individual_encoding.Individual]
+    :param population_size: number of individuals the population should finally contain
+    :type population_size: int
+    :param options: contains all available options for the sizing of each component.
+    :type options: individual_encoding.SizingOptions:
+    
+    :return: list of individuals of the completed population
+    :rtype: completed_population: List[individual_encoding.Individual]        
+    """
     len_parents = len(original_parents)
     for _ in range(population_size - len_parents):
         individual = individual_encoding.Individual.create_random_individual(
@@ -87,21 +98,16 @@ def crossover_conventional(
     parent1: individual_encoding.Individual, parent2: individual_encoding.Individual
 ) -> Tuple[individual_encoding.Individual, individual_encoding.Individual]:
     """
-    cross over: exchange parts of bitstring by randomly generated index
+    Combines two individuals (parents) to two new individuals (children). This is done by randomly generating an index and exchanging parts of the bitstrings, which describe individuals.
 
-    Parameters
-    ----------
-    parent1 : individual_encoding.RatedIndividual
-        Encoding of first parent used for cross over.
-    parent2 : individual_encoding.RatedIndividual
-        Encoding of second parent used for cross over.
-
-    Returns
-    -------
-    child1 : individual_encoding.RatedIndividual
-        Encoding of first resulting child from cross over.
-    child2 : individual_encoding.RatedIndividual
-        Encoding of second resulting child from cross over.
+    :param parent1: encoding of first parent used for cross over
+    :type parent1: individual_encoding.RatedIndividual
+    :param parent2: encoding of second parent used for cross over
+    :type parent2: individual_encoding.RatedIndividual
+    :return child1: encoding of first resulting child from cross over
+    :rtype child1: individual_encoding.RatedIndividual
+    :return child2: encoding of second resulting child from cross over
+    :rtype child2: individual_encoding.RatedIndividual
     """
     vector_bool_1 = parent1.bool_vector[:]  # cloning all relevant lists
     vector_discrete_1 = parent1.discrete_vector[:]
@@ -147,17 +153,12 @@ def mutation_bool(
     parent: individual_encoding.Individual,
 ) -> individual_encoding.Individual:
     """
-    Mutation: changing bit value at one position in boolean vector.
+    Slightly changes individual by randomly changing one bit of the boolean bitstring, which describes an individual.
 
-    Parameters
-    ----------
-    parent : individual_encoding.Individual
-        Encoding of parent used for mutation.
-
-    Returns
-    -------
-    child : individual_encoding.RatedIndividual
-        Encoding of first resulting child from cross over.
+    :param parent: encoding of parent used for mutation
+    :type parent: individual_encoding.Individual
+    :return: encoding of first resulting child from cross over
+    :rtype: individual_encoding.RatedIndividual
     """
     vector_bool = parent.bool_vector[:]
     bit = random.randint(0, len(vector_bool) - 1)
@@ -172,20 +173,14 @@ def mutation_discrete(
     parent: individual_encoding.Individual, options: individual_encoding.SizingOptions
 ) -> individual_encoding.Individual:
     """
-    Mutation: changing bit value at one position in discrete vector.
+    Slightly changes individual by randomly changing one bit of the discrete bitstring, which describes an individual.
 
-    Parameters
-    ----------
-    parent : individual_encoding.Individual
-        Encoding of parent for mutation.
-    options : individual_encoding.SizingOptions
-        Instance of dataclass sizing options.
-        It contains a list of all available options for sizing of each component.
-
-    Returns
-    -------
-    child : individual_encoding.RatedIndividual
-        Encoding of first resulting child from cross over.
+    :param parent: encoding of parent used for mutation
+    :type parent: individual_encoding.Individual
+    :param options: contains all available options for the sizing of each component
+    :type options: individual_encoding.SizingOptions
+    :return: encoding of first resulting child from cross over
+    :rtype: individual_encoding.RatedIndividual
     """
     vector_discrete = parent.discrete_vector[:]
     bit = random.randint(0, len(vector_discrete) - 1)
@@ -207,18 +202,19 @@ def evolution(
     options: individual_encoding.SizingOptions,
 ) -> List[individual_encoding.Individual]:
     """
-    evolution step of the genetic algorithm
+    One step of the evolutionary algorithm (evolution) not including the selection process. Random numbers are generated to decide if cross over, mutation or nothing is considered for the creation of a new generation.
 
-    Parameters
-    ----------
-    parents : List[individual_encoding.RatedIndividual]
-        List of rated individuals.
-    r_cross : float
-        Cross over probability.
-    r_mut : float
-        Mutation probability.
-    mode : str
-        Mode 'bool' for boolean variation and 'discrete' for discrete variation.
+    :param parents:  list of rated individuals
+    :type parents: List[individual_encoding.RatedIndividual]
+    :param r_cross: cross over probability.
+    :type r_cross: float
+    :param r_mut: mutation probability
+    :type r_mut: float
+    :param mode: iteration mode: "bool" or "discrete"
+    :type mode: str
+    :type options: contains all available options for the sizing of each component
+    :type options: individual_encoding.SizingOptions
+
 
     Returns
     -------
