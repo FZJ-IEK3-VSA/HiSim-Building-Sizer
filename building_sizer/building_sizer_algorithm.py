@@ -38,6 +38,31 @@ class BuildingSizerRequest:
     A request object for the building sizer. Contains all necessary data for
     a single building sizer iteration. Can be used to create the request object
     for the subsequent iteration.
+
+    :param url: url for connection to the UTSP
+    :type url: str
+    :param api_key: password for the connection to the UTSP
+    :type api_key: str
+    :param bulding_sizer_version: Version of the building sizer
+    :type building_sizer_version: str
+    :param hisim_version: Version of HiSIM the building sizer calls upon
+    :type building_sizer_version: str
+    :param remaining_iterations: number of iterations the evolutionary algorithm should have
+    :type remaining_iterations: int
+    :param boolean_iterations: number of iterations where the decision of which components to use is evaluated.
+    :tpye boolean_iterations: int
+    :param discrete_iterations: number of iterations where the decision of which size the components should have is evaluated
+    :tpye boolean_iterations: int
+    :param population_sizer: number of individuals considered in each population
+    :tpye population_size: int
+    :param crossover_probabiltiy: number of individuals considered in each population
+    :tpye crossover_probabiltiy: float
+    :param mutation_probabiltiy: number of individuals considered in each population
+    :tpye mutation_probabiltiy: float
+    :param options: number of individuals considered in each population
+    :tpye options: individual_encoding.SizingOptions
+    :archetype_config_: builing parameters of HiSIM (independet of system config, climate, house type, etc. need to be defined)
+    :tpye population_size: archetype_config.ArcheTypeConfig
     """
 
     url: str
@@ -91,6 +116,13 @@ class BuildingSizerResult:
     sizer iteration. The finished flag indicates whether it was the final iteration.
     If not, the building sizer request for the subsequent iteration is contained in
     the property subsequent_request.
+
+    :param finished: status of building sizer iteration
+    :type finished: bool
+    :param subsequent_request:
+    :type subsequent_request: Optional[TimeSeriesRequest]
+    :param result: placeholder for results of the building sizer
+    :type result: Any
     """
 
     finished: bool

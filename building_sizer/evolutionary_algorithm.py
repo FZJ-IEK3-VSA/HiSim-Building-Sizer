@@ -104,10 +104,8 @@ def crossover_conventional(
     :type parent1: individual_encoding.RatedIndividual
     :param parent2: encoding of second parent used for cross over
     :type parent2: individual_encoding.RatedIndividual
-    :return child1: encoding of first resulting child from cross over
-    :rtype child1: individual_encoding.RatedIndividual
-    :return child2: encoding of second resulting child from cross over
-    :rtype child2: individual_encoding.RatedIndividual
+    :return: encoding of childs resulting from cross over
+    :rtype child1: Tuple[individual_encoding.RatedIndividual,individual_encoding.RatedIndividual]
     """
     vector_bool_1 = parent1.bool_vector[:]  # cloning all relevant lists
     vector_discrete_1 = parent1.discrete_vector[:]
@@ -214,14 +212,10 @@ def evolution(
     :type mode: str
     :type options: contains all available options for the sizing of each component
     :type options: individual_encoding.SizingOptions
-
-
-    Returns
-    -------
-    Children : List[individual_encoding.Individual]
-        List of unrated individuals.
-
+    :return: list of unrated individuals
+    :rtype: List[individual_encoding.Individual]
     """
+
     # get array length
     len_parents = len(parents)
     # index to randomly select parents
