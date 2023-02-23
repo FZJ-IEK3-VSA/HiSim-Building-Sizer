@@ -11,9 +11,13 @@
 
 Welcome to HiSim Building Sizer's documentation!
 ================================================
-The 'HiSim Building Sizer' is a tool supporting the choice and sizing of technical equipment of a building. For example the best size for batteries can be chosen via the building sizer or investment decisions in electric vehicles or heat pumps can be supported. The decisions are based on heuristic optimization (evolutionary algorithms), which call upon simulations of the python package `HiSim <https://github.com/FZJ-IEK3-VSA/HiSim>`_. HiSim simulates total energy curves for selected building configurations and evaluates key performance indicators like self consumption rates or autarky rates based on them.
+The HiSim Building Sizer is a tool supporting the choice and sizing of technical equipment of a building. For example the best size for batteries can be chosen via the building sizer or investment decisions in electric vehicles or heat pumps can be supported.
+The decisions are based on heuristic optimization (evolutionary algorithms), which call upon simulations of the python package `HiSim <https://github.com/FZJ-IEK3-VSA/HiSim>`_. HiSim simulates total energy curves for selected building configurations and evaluates key performance indicators like self consumption rates or autarky rates based on them.
 
 All building parameters available in HiSim can be varied in the Building Sizer, e.g., photovoltaic system peak power, battery capacity, the consideration of electric vehicles and heat pumps or smart control of dish washers and washing machines.
+The building sizer (evolutionary algorithm) is controlled via iterations and alternates between boolean decision iterations, where the technologies considered in the building are optimized and discrete sizing iterations, where the best size of the related technologies is optimized.
+Scores of results of each iteration are plotted to monitor convergence and all information of all iterations are tracked.
+
 Within the evolutionary algorithm, the distributed job manager `UTSP <https://github.com/FZJ-IEK3-VSA/UTSP_Client>`_ is utilized to calculate all HiSim simulations of a single generation in parallel.
 
 
@@ -57,6 +61,17 @@ We are the `Institute of Energy and Climate Research - Techno-economic Systems A
    :width: 400px
 
 `Universidad de Deusto <https://www.deusto.es/en/inicio>`_ supported the building sizer especially when it comes to the design of the optimization approach.
+
+Acknowledgement
+=========================================================
+This project has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 891943. 
+
+.. figure:: ../logos/eulogo.png
+   :width: 200px
+
+.. figure:: ../logos/whylogo.jpg
+   :target: https://www.why-h2020.eu
+   :width: 200px
 
 License
 =========================================================
