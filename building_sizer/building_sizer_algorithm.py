@@ -37,51 +37,40 @@ class BuildingSizerRequest:
     A request object for the building sizer. Contains all necessary data for
     a single building sizer iteration. Can be used to create the request object
     for the subsequent iteration.
-
-    :param str url: url for connection to the UTSP
-    :param api_key: password for the connection to the UTSP
-    :type api_key: str
-    :param bulding_sizer_version: Version of the building sizer
-    :type building_sizer_version: str
-    :param hisim_version: Version of HiSIM the building sizer calls upon
-    :type hisim_version: str
-    :param remaining_iterations: number of iterations the evolutionary algorithm should have
-    :type remaining_iterations: int
-    :param boolean_iterations: number of iterations where the decision of which components to use is evaluated.
-    :type boolean_iterations: int
-    :param discrete_iterations: number of iterations where the decision of which size the components should have is evaluated
-    :type discrete_iterations: int
-    :param population_sizer: number of individuals considered in each population
-    :type population_size: int
-    :param crossover_probabiltiy: probability for each individual for doing crossover with the next individual
-    :type crossover_probabiltiy: float
-    :param mutation_probabiltiy: probability for each individual for mutating
-    :type mutation_probabiltiy: float
-    :param options: SizingOptions object, containing information for decoding and encoding individuals
-    :type options: individual_encoding.SizingOptions
-    :param archetype_config_ archetype_config_: builing parameters of HiSIM (independet of system config, climate, house type, etc. need to be defined)
     """
-
+    #: url for connection to the UTSP
     url: str
+    #: password for the connection to the UTSP
     api_key: str = ""
+    #: Version of the building sizer
     building_sizer_version: str = ""
+    #: Version of HiSIM the building sizer calls upon
     hisim_version: str = ""
+    #: number of iterations the evolutionary algorithm should have
     remaining_iterations: int = 3
+    #: number of iterations where the decision of which components to use is evaluated.
     boolean_iterations: int = 3
+    #: number of iterations where the decision of which size the components should have is evaluated
     discrete_iterations: int = 9
 
     # parameters for the evolutionary algorithm
+    #: number of individuals considered in each population
     population_size: int = 5  # number of individuals to be created
+    #: probability for each individual for doing crossover with the next individual
     crossover_probability: float = 0.2
+    #: probability for each individual for mutating
     mutation_probability: float = 0.4
+    #: SizingOptions object, containing information for decoding and encoding individuals
     options: individual_encoding.SizingOptions = dataclasses.field(
         default=individual_encoding.SizingOptions()
     )
 
     # parameters for HiSim
+    #: builing parameters of HiSIM (independet of system config, climate, house type, etc. need to be defined)
     archetype_config_: Optional[archetype_config.ArcheTypeConfig] = None
 
     # stores the HiSim requests triggered in earlier iterations
+    #: HiSim requests from earlier iterations
     requisite_requests: List[TimeSeriesRequest] = dataclasses.field(
         default_factory=list
     )
@@ -113,17 +102,13 @@ class BuildingSizerResult:
     sizer iteration. The finished flag indicates whether it was the final iteration.
     If not, the building sizer request for the subsequent iteration is contained in
     the property subsequent_request.
-
-    :param finished: status of building sizer iteration
-    :type finished: bool
-    :param subsequent_request:
-    :type subsequent_request: Optional[TimeSeriesRequest]
-    :param result: placeholder for results of the building sizer
-    :type result: Any
     """
 
+    #: status of building sizer iteration
     finished: bool
+    #: placeholder for hisim configurations, matching the results
     subsequent_request: Optional[TimeSeriesRequest] = None
+    #: placeholder for results of the building sizer
     result: Any = None
 
 
