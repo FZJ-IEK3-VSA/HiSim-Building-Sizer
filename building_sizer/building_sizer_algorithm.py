@@ -38,6 +38,7 @@ class BuildingSizerRequest:
     a single building sizer iteration. Can be used to create the request object
     for the subsequent iteration.
     """
+
     #: url for connection to the UTSP
     url: str
     #: password for the connection to the UTSP
@@ -62,7 +63,7 @@ class BuildingSizerRequest:
     mutation_probability: float = 0.4
     #: SizingOptions object, containing information for decoding and encoding individuals
     options: individual_encoding.SizingOptions = dataclasses.field(
-        default=individual_encoding.SizingOptions()
+        default_factory=individual_encoding.SizingOptions()
     )
 
     # parameters for HiSim

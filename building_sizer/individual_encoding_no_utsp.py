@@ -10,7 +10,10 @@ from dataclasses import dataclass, field
 from typing import List
 
 from dataclasses_json import dataclass_json
-from hisim.modular_household.interface_configs.system_config import SystemConfig  # type: ignore
+from hisim.building_sizer_utils.interface_configs.system_config import (
+    EnergySystemConfig,
+)
+from hisim.loadtypes import HeatingSystems
 
 
 class BuildingSizerException(Exception):
@@ -23,43 +26,49 @@ class BuildingSizerException(Exception):
 class SizingOptions:
     """Contains all relevant information to encode and decode system configs. """
 
-    #: list of all sizes of PV panels considered in the optimization given in Wp
-    pv_peak_power: List[float] = field(
-        default_factory=lambda: [6e2, 1.2e3, 1.8e3, 3e3, 6e3, 9e3, 12e3, 15e3]
+    #: list of all shares of maximum rooftop PV power potential
+    share_of_maximum_pv_potential: List[float] = field(
+        default_factory=lambda: [round(i * 0.1, 1) for i in range(11)]
     )
-    #: list of all sizes of batteries considered in the optimization given in kWh
-    battery_capacity: List[float] = field(
-        default_factory=lambda: [0.3, 0.6, 1.5, 3, 5, 7.5, 10, 15]
+    #: list of heating system for space heating
+    space_heating_system: List[HeatingSystems] = field(
+        default_factory=lambda: [HeatingSystems.HEAT_PUMP, HeatingSystems.GAS_HEATING]
     )
-    #: list of all sizes of buffer storages considered in the optimization given in multiples of the default
-    buffer_volume: List[float] = field(default_factory=lambda: [1, 2, 5, 10])
+    #: list of heating system for domestic hot water
+    domestic_hot_water_heating_system: List[HeatingSystems] = field(
+        default_factory=lambda: [HeatingSystems.HEAT_PUMP, HeatingSystems.GAS_HEATING]
+    )
     # these lists define the layout of the individual vectors
     #: list of technologies (boolean attributes) considered in the optimization
-    bool_attributes: List[str] = field(
-        default_factory=lambda: ["pv_included", "battery_included"]
-    )
+    # bool_attributes: List[str] = field(
+    #     default_factory=lambda: ["pv_included", "battery_included"]
+    # )
     #: list of technologies with different sizing options (discrete attributes) used within the optimization
     discrete_attributes: List[str] = field(
-        default_factory=lambda: ["pv_peak_power", "battery_capacity"]
+        default_factory=lambda: [
+            "share_of_maximum_pv_potential",
+            "domestic_hot_water_heating_system",
+            "space_heating_system",
+        ]
     )
     # this list defines the probabilites of each component to be included at the beginning
     #: defines probability of each component to be considered at the initial configurations
-    probabilities: List[float] = field(default_factory=lambda: [0.8, 0.4])
+    # probabilities: List[float] = field(default_factory=lambda: [0.8, 0.4])
 
-    def __post_init__(self):
-        """Checks if every element of attribute list bool_attributes and list discrete_attributes
-        is also attribute of class SystemConfig."""
-        for name in self.bool_attributes + self.discrete_attributes:
-            if not hasattr(SystemConfig, name):
-                raise AttributeError(
-                    f"Invalid vector attribute: SystemConfig has no member '{name}'"
-                )
-        for name in self.discrete_attributes:
-            if not hasattr(self, name):
-                raise AttributeError(
-                    f"Missing list of allowed values: SizingOptions has no member '{name} '"
-                    f"specifying allowed values for the attribute of the same name"
-                )
+    # def __post_init__(self):
+    #     """Checks if every element of attribute list bool_attributes and list discrete_attributes
+    #     is also attribute of class EnergySystemConfig."""
+    #     for name in self.bool_attributes + self.discrete_attributes:
+    #         if not hasattr(EnergySystemConfig, name):
+    #             raise Exception(
+    #                 f"Invalid vector attribute: SystemConfig has no member '{name}'"
+    #             )
+    #     for name in self.discrete_attributes:
+    #         if not hasattr(self, name):
+    #             raise Exception(
+    #                 f"Missing list of allowed values: SizingOptions has no member '{name} '"
+    #                 f"specifying allowed values for the attribute of the same name"
+    #             )
 
 
 @dataclass_json
@@ -69,7 +78,7 @@ class Individual:
     """System config as numerical vectors. """
 
     #: encoding of the individual (HiSIM configuration) of the boolean part - each digit decides if related technology is included or not
-    bool_vector: List[bool] = field(default_factory=list)
+    # bool_vector: List[bool] = field(default_factory=list)
     #: encoding of the individual (HiSIM configuration) of the discrete part - each digit describes the size of the considered technology
     discrete_vector: List[float] = field(default_factory=list)
 
@@ -84,14 +93,14 @@ class Individual:
         :rtype individual: Individual
         """
         individual = Individual()
-        # randomly assign the bool attributes True or False
-        assert len(options.probabilities) == len(options.bool_attributes), (
-            "Invalid SizingOptions: members probabilities and bool_attributes have different length. "
-            "There must be one probability for each bool attribute."
-        )
-        for probability in options.probabilities:
-            dice = random.uniform(0, 1)  # random number between zero and one
-            individual.bool_vector.append(dice < probability)
+        # # randomly assign the bool attributes True or False
+        # assert len(options.probabilities) == len(options.bool_attributes), (
+        #     "Invalid SizingOptions: members probabilities and bool_attributes have different length. "
+        #     "There must be one probability for each bool attribute."
+        # )
+        # for probability in options.probabilities:
+        #     dice = random.uniform(0, 1)  # random number between zero and one
+        #     individual.bool_vector.append(dice < probability)
         # randomly assign the discrete attributes depending on the allowed values
         for component in options.discrete_attributes:
             allowed_values = getattr(options, component)
@@ -112,7 +121,7 @@ class RatedIndividual:
 
 
 def create_individual_from_config(
-    system_config: SystemConfig, options: SizingOptions
+    system_config: EnergySystemConfig, options: SizingOptions
 ) -> Individual:
     """Creates discrete and boolean vector from given SystemConfig.
 
@@ -124,18 +133,18 @@ def create_individual_from_config(
     :return: Individual with bool and discrete vector.
     :rtype: Individual
     """
-    bool_vector: List[bool] = [
-        getattr(system_config, name) for name in options.bool_attributes
-    ]
+    # bool_vector: List[bool] = [
+    #     getattr(system_config, name) for name in options.bool_attributes
+    # ]
     discrete_vector: List[float] = [
         getattr(system_config, name) for name in options.discrete_attributes
     ]
-    return Individual(bool_vector, discrete_vector)
+    return Individual(discrete_vector)  # Individual(bool_vector, discrete_vector)
 
 
 def create_config_from_individual(
     individual: Individual, options: SizingOptions
-) -> SystemConfig:
+) -> EnergySystemConfig:
     """
     Creates a SystemConfig object from the bool and discrete vectors of an
     Individual object. For this, the SizingOptions object is needed.
@@ -149,13 +158,13 @@ def create_config_from_individual(
     :rtype: SystemConfig
     """
     # create a default SystemConfig object
-    system_config = SystemConfig()
+    system_config = EnergySystemConfig()
     # assign the bool attributes
-    assert len(options.bool_attributes) == len(
-        individual.bool_vector
-    ), "Invalid individual: wrong number of bool parameters"
-    for i, name in enumerate(options.bool_attributes):
-        setattr(system_config, name, individual.bool_vector[i])
+    # assert len(options.bool_attributes) == len(
+    #     individual.bool_vector
+    # ), "Invalid individual: wrong number of bool parameters"
+    # for i, name in enumerate(options.bool_attributes):
+    #     setattr(system_config, name, individual.bool_vector[i])
     # assign the discrete attributes
     assert len(options.discrete_attributes) == len(
         individual.discrete_vector
@@ -167,7 +176,7 @@ def create_config_from_individual(
 
 def create_random_system_configs(
     number: int, options: SizingOptions
-) -> List[SystemConfig]:
+) -> List[EnergySystemConfig]:
     """
     Creates the desired number of random individuals (HiSIM system configurations).
 

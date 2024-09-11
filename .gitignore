@@ -130,3 +130,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+/building_sizer/bs_request*
+/building_sizer/default_module_config.json

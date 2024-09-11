@@ -1,27 +1,27 @@
 """Sends a building sizer request to the UTSP and waits until the calculation is finished."""
-
+import sys
 import json
+import os
 from datetime import datetime
-from typing import Dict, Iterable, List
+from typing import Dict, List
 
 import matplotlib.pyplot as plt  # type: ignore
 import pandas as pd
-from hisim.modular_household.interface_configs import kpi_config  # type: ignore
-from utspclient import client  # type: ignore
-from utspclient.datastructures import TimeSeriesRequest  # type: ignore
-
-from building_sizer import building_sizer_algorithm, individual_encoding
-from building_sizer.building_sizer_algorithm import (
+from building_sizer import building_sizer_algorithm_no_utsp, individual_encoding_no_utsp
+from building_sizer.building_sizer_algorithm_no_utsp import (
     BuildingSizerRequest,
     BuildingSizerResult,
 )
 
-# Define URL and API key for the UTSP server
-URL = "http://134.94.131.167:443/api/v1/profilerequest"
-API_KEY = ""
+# Add the parent directory to the system path
+sys.path.append("/fast/home/k-rieck/repositories/HiSim")
+from hisim.building_sizer_utils.interface_configs.archetype_config import (
+    ArcheTypeConfig,
+)
+from hisim.building_sizer_utils.interface_configs.kpi_config import KPIConfig
 
 
-def plot_ratings(ratings: List[List[float]]) -> None:
+def plot_ratings(ratings: List[List[float]], main_building_sizer_request_directory: str) -> None:
     """
     Generate a boxplot for each generation showing the range of ratings
 
@@ -36,10 +36,12 @@ def plot_ratings(ratings: List[List[float]]) -> None:
     _ = ax.boxplot(ratings)  # type: ignore
     # show plot
     plt.show()
+    plt.savefig(os.path.join(main_building_sizer_request_directory, "ratings_plot.png"))
 
 
 def get_ratings_of_generation(
-    building_sizer_config: BuildingSizerRequest,
+    building_sizer_request: BuildingSizerRequest,
+    main_building_sizer_request_directory: str,
 ) -> Dict[str, str]:
     """
     Returns the KPIs (results of HiSIM calculation) for one generation of HiSim configurations
@@ -49,18 +51,15 @@ def get_ratings_of_generation(
     :return: a dict mapping each HiSim configuration to its KPIs
     :rtype: Dict[float]
     """
-    hisim_results = building_sizer_algorithm.get_results_from_requisite_requests(
-        building_sizer_config.requisite_requests, URL, API_KEY
+    ratings = building_sizer_algorithm_no_utsp.get_results_from_requisite_hisim_configs(
+        requisite_hisim_config_paths=building_sizer_request.requisite_hisim_config_paths,
+        main_building_sizer_request_directory=main_building_sizer_request_directory,
     )
-    # Extract the rating for each HiSim config
-    ratings = {
-        config: result.data["kpi_config.json"].decode()
-        for config, result in hisim_results.items()
-    }
+
     return ratings
 
 
-def get_rating(kpi: str) -> float:
+def get_rating(kpi_dict: Dict) -> float:
     """Computes the fitness or rating of one individual (hisim configuration).
 
     :kpi: List of key performance indicatiors - results of HiSIM simulation.
@@ -69,10 +68,10 @@ def get_rating(kpi: str) -> float:
     :rtype: float
     """
 
-    return kpi_config.KPIConfig.from_json(kpi).get_kpi()  # type: ignore
+    return KPIConfig.from_dict(kpi_dict).get_kpi()  # type: ignore
 
 
-def get_ratings(kpis: Iterable[str]) -> List[float]:
+def get_ratings(kpis_dicts: List[Dict]) -> List[float]:
     """Computes the fitness or rating of multiple individuals (hisim configurations).
 
     :kpis: List of HiSIM simulation results (key performance indicatiors).
@@ -81,10 +80,10 @@ def get_ratings(kpis: Iterable[str]) -> List[float]:
     :rtype: List[float]
     """
 
-    return [get_rating(s) for s in kpis]
+    return [get_rating(kpi_dict) for kpi_dict in kpis_dicts]
 
 
-def minimize_config(hisim_config: str) -> str:
+def minimize_config(hisim_config_path: str) -> str:
     """
     Helper method for testing, that extracts only the relevant fields of a system config
     to print them in a clearer way.
@@ -94,20 +93,19 @@ def minimize_config(hisim_config: str) -> str:
     :rtype: str
     """
 
-    modular_hh_config = json.loads(hisim_config)
-    sys_config = modular_hh_config["system_config_"]
+    with open(hisim_config_path, "r", encoding="utf-8") as json_file:
+        modular_hh_config = json.load(json_file)
+    sys_config = modular_hh_config["energy_system_config_"]
     keys = [
-        "pv_included",
-        "pv_peak_power",
-        "battery_included",
-        "battery_capacity",
-        # "ev_included",
+        "space_heating_system",
+        "domestic_hot_water_heating_system",
+        "share_of_maximum_pv_potential",
     ]
     minimal = {k: sys_config[k] for k in keys}
     return json.dumps(minimal)
 
 
-def main():
+def main(archetype_config: ArcheTypeConfig = ArcheTypeConfig()):
     """
     Default function to call the building sizer.
 
@@ -135,40 +133,42 @@ def main():
     :tpye archetype_config_: archetype_config.ArcheTypeConfig
     """
 
-    guid = ""  # .join(random.choices(string.ascii_uppercase + string.digits, k=10))
-
-    # Set the parameters for the building sizer
-    hisim_version = ""
-    building_sizer_version = ""
-    options = individual_encoding.SizingOptions()
-    # options.probabilities.extend([0.5])
-    # options.bool_attributes.extend(["ev_included"])
+    options = individual_encoding_no_utsp.SizingOptions()
 
     # Create an initial simulation configuration for the building sizer
-    initial_building_sizer_config = BuildingSizerRequest(
-        URL,
-        API_KEY,
-        building_sizer_version,
-        hisim_version,
-        remaining_iterations=12,
-        boolean_iterations=3,
-        discrete_iterations=5,
-        population_size=5,
-        crossover_probability=0.2,
-        mutation_probability=0.4,
+    initial_building_sizer_request = BuildingSizerRequest(
+        remaining_iterations=10,
+        discrete_iterations=10,
+        population_size=1,
+        crossover_probability=0.5,
+        mutation_probability=0.5,
         options=options,
-        archetype_config_=None,
+        archetype_config_=archetype_config,
     )
-    building_sizer_config_json = initial_building_sizer_config.to_json()  # type: ignore
-    provider_name = "building_sizer" + (
-        f"-{building_sizer_version}" if building_sizer_version else ""
+    # create folder where everything related to this building sizer request is stored
+    main_building_sizer_request_directory = os.path.join(
+        os.getcwd(), f"bs_request_{initial_building_sizer_request.get_hash()}"
     )
-    # Create the initial building sizer request
-    building_sizer_request = TimeSeriesRequest(
-        building_sizer_config_json, provider_name, guid=guid,
-    )
+    if not os.path.isdir(main_building_sizer_request_directory):
+        os.makedirs(main_building_sizer_request_directory)
+    else:
+        raise ValueError(
+            f"The directory for the initial building sizer request {initial_building_sizer_request.get_hash()} already exists. It should not exist twice."
+        )
+    # save initial building sizer request
+    with open(
+        os.path.join(
+            main_building_sizer_request_directory, "initial_building_sizer_request.json"
+        ),
+        "w",
+        encoding="utf-8",
+    ) as file:
+        json.dump(initial_building_sizer_request.to_dict(), file, indent=4)
 
-    # Store the hash of each request in a set for loop detection
+    # building_sizer_config_json = initial_building_sizer_request.to_json()  # type: ignore
+    building_sizer_request = initial_building_sizer_request
+
+    # # Store the hash of each request in a set for loop detection
     previous_iterations = {building_sizer_request.get_hash()}
 
     # Store all iterations of building sizer requests in order
@@ -179,47 +179,73 @@ def main():
     all_ratings_list = []
     start = datetime.now()
     while not finished:
-        # Wait until the request finishes and the results are delivered
-        result = client.request_time_series_and_wait_for_delivery(
-            URL, building_sizer_request, API_KEY
+        print("\n")
+        print("-----------------------------")
+        print("NEXT ITERATION")
+        print("-----------------------------")
+        print("\n")
+
+        # Get result by calling building_sier_algorithm_no_utsp locally
+        building_sizer_algorithm_no_utsp.main_without_utsp(
+            request=building_sizer_request,
+            main_building_sizer_request_directory=main_building_sizer_request_directory,
         )
+
         # Get the content of the result file created by the Building Sizer
-        status_json = result.data["status.json"].decode()
-        building_sizer_result: BuildingSizerResult = BuildingSizerResult.from_json(status_json)  # type: ignore
+        # status_json = result.data["status.json"].decode()
+        with open(
+            os.path.join(
+                main_building_sizer_request_directory, "results", "status.json"
+            ),
+            "r",
+            encoding="utf-8",
+        ) as file:
+            status_json = json.load(file)
+        building_sizer_result: BuildingSizerResult = BuildingSizerResult.from_dict(status_json)  # type: ignore
+
         # Check if this was the final iteration and the building sizer is finished
         finished = building_sizer_result.finished
         # Get the building sizer configuration for the next request
-        if building_sizer_result.subsequent_request is not None:
-            building_sizer_request = building_sizer_result.subsequent_request
+        if building_sizer_result.subsequent_building_sizer_request is not None:
+            # overwrite old building sizer request with new request
+            building_sizer_request = (
+                building_sizer_result.subsequent_building_sizer_request
+            )
             # Loop detection: check if the same building sizer request has been encountered before (that would result in an endless loop)
             request_hash = building_sizer_request.get_hash()
+
             if request_hash in previous_iterations:
                 raise RuntimeError(
                     f"Detected a loop: the following building sizer request has already been sent before.\n{building_sizer_request}"
                 )
             previous_iterations.add(request_hash)
 
-            # Store the building sizer config
-            building_sizer_config = BuildingSizerRequest.from_json(building_sizer_request.simulation_config)  # type: ignore
-            building_sizer_iterations.append(building_sizer_config)
-        print(f"Interim results: {building_sizer_result.result}")
-        # store the ratings of this generation
-        generation = get_ratings_of_generation(building_sizer_config)
-        all_ratings += f"{list(generation.values())}\n"
-        generations.append(generation)
-        all_ratings_list.append(get_ratings(generation.values()))
-        for bs_config, kpis in generation.items():
-            print(minimize_config(bs_config), " - ", get_rating(kpis))
-            print("---")
+            # Store the building sizer
+            building_sizer_iterations.append(building_sizer_request)
+            print(f"Interim results: {building_sizer_result.result}")
+            # store the ratings of this generation
+            generation = get_ratings_of_generation(
+                building_sizer_request, main_building_sizer_request_directory
+            )
+            all_ratings += f"{list(generation.values())}\n"
+            generations.append(generation)
+            all_ratings_list.append(get_ratings(generation.values()))
+            for hisim_config_path, kpi_result_dict in generation.items():
+                print(
+                    "ratings ",
+                    minimize_config(hisim_config_path),
+                    " - ",
+                    get_rating(kpi_result_dict),
+                )
+                print("---")
 
     print(f"Finished. Optimization took {datetime.now() - start}.")
-    print(all_ratings)
-    plot_ratings(all_ratings_list)
+    plot_ratings(all_ratings_list, main_building_sizer_request_directory)
 
-    create_table(generations)
+    create_table(generations, main_building_sizer_request_directory)
 
 
-def create_table(generations):
+def create_table(generations: Dict, main_building_sizer_request_directory: str):
     """
     Writes csv containing all kpi values (HiSIM results) of all individuals (HiSim configuration) of each generation (iteration).
 
@@ -228,10 +254,10 @@ def create_table(generations):
     """
     data: dict = {}
     for iteration, generation in enumerate(generations):
-        for config, kpi in generation.items():
-            config = minimize_config(config)
-            d_config = json.loads(config)
-            d_kpi = json.loads(kpi)
+        for hisim_config_path, kpi_dict in generation.items():
+            hisim_config_json = minimize_config(hisim_config_path)
+            d_config = json.loads(hisim_config_json)
+            d_kpi = kpi_dict
             d_total = dict(d_config, **d_kpi)
             d_total["iteration"] = iteration
             for name, value in d_total.items():
@@ -241,7 +267,11 @@ def create_table(generations):
 
     df = pd.DataFrame.from_dict(data)
     print(df)
-    df.to_csv("./building_sizer_results.csv")
+    df.to_csv(
+        os.path.join(
+            main_building_sizer_request_directory, "building_sizer_results.csv"
+        )
+    )
 
 
 if __name__ == "__main__":
