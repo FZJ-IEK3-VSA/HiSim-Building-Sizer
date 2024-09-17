@@ -14,11 +14,6 @@ def maincall() -> None:
 
 
 if __name__ == "__main__":
-    """Called from the command line.
-    This function calls HiSim main and performs a profiling with cprofile.
-    The results are dumped to various text files in the result directory
-    and the .prof file can be visualized with for example snakeviz.
-    """
 
     profiler = cProfile.Profile()
     profiler.enable()

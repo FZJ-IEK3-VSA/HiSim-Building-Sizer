@@ -459,5 +459,5 @@ def main_without_utsp(
     if not isExist:
         # Create a new directory because it does not exist
         os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w+") as result_file:
+    with open(path, "w+", encoding="utf-8") as result_file:
         result_file.write(building_sizer_result_json)
