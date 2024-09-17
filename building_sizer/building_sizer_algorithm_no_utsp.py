@@ -245,7 +245,7 @@ def get_results_from_requisite_hisim_configs(
         PostProcessingOptions.WRITE_KPIS_TO_JSON_FOR_BUILDING_SIZER
     )
     # set logging level to 1
-    my_simulation_parameters.logging_level = 1
+    my_simulation_parameters.logging_level = 3
 
     for index, hisim_config_path in enumerate(requisite_hisim_config_paths):
         # set hisim results directory
@@ -427,9 +427,6 @@ def main_without_utsp(
     request: BuildingSizerRequest, main_building_sizer_request_directory: str
 ):
     """One iteration in the building sizer."""
-
-    print("request remianing iterations", request.remaining_iterations)
-    print("request hisim config paths", request.requisite_hisim_config_paths, "\n")
 
     # Check if there are hisim requests from previous iterations
     if request.requisite_hisim_config_paths:

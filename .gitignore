@@ -133,3 +133,5 @@ dmypy.json
 
 /building_sizer/bs_request*
 /building_sizer/default_module_config.json
+/building_sizer/*.txt
+/building_sizer/*.prof

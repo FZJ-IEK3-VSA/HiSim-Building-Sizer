@@ -5,11 +5,13 @@ Classes to gather information needed for the Translator as well as combine infor
 """
 
 import json
+import sys
 import random
 from dataclasses import dataclass, field
 from typing import List
 
 from dataclasses_json import dataclass_json
+sys.path.append("/fast/home/k-rieck/repositories/HiSim")
 from hisim.building_sizer_utils.interface_configs.system_config import (
     EnergySystemConfig,
 )
