@@ -2,6 +2,8 @@
 import sys
 import json
 import os
+import time
+import subprocess
 from datetime import datetime
 from typing import Dict, List
 
@@ -137,8 +139,8 @@ def main(archetype_config: ArcheTypeConfig = ArcheTypeConfig()):
 
     # Create an initial simulation configuration for the building sizer
     initial_building_sizer_request = BuildingSizerRequest(
-        remaining_iterations=10,
-        discrete_iterations=10,
+        remaining_iterations=4,
+        discrete_iterations=4,
         population_size=3,
         crossover_probability=0.5,
         mutation_probability=0.5,
@@ -190,17 +192,59 @@ def main(archetype_config: ArcheTypeConfig = ArcheTypeConfig()):
             request=building_sizer_request,
             main_building_sizer_request_directory=main_building_sizer_request_directory,
         )
+        # # Get result by calling building_sier_algorithm_no_utsp on cluster
+        # # SLURM script to execute
+        # slurm_script = "/fast/home/k-rieck/HiSim-Building-Sizer/cluster_requests/job_array_building_sizer_algorithm.sh"
+        # # Serialize the `building_sizer_request` object to a JSON string
+        # json_bs_request_params = json.dumps(building_sizer_request.to_dict())
 
+        # # Call the SLURM script with subprocess and pass the two parameters
+        # slurm_result_bs_algorithm = subprocess.run(["sbatch", slurm_script, json_bs_request_params, main_building_sizer_request_directory], check=True, capture_output=True, text=True)
+
+        # # building_sizer_algorithm_no_utsp.main_without_utsp(
+        # #     request=building_sizer_request,
+        # #     main_building_sizer_request_directory=main_building_sizer_request_directory,
+        # # )
+        # # Extract the job ID from the output of `sbatch`
+        # print("slrum result", slurm_result_bs_algorithm)
+        # print("slrum result stdout", slurm_result_bs_algorithm.stdout)
+        # # if stdout is none check if any errors occured
+        # if slurm_result_bs_algorithm.stdout is None:
+        #     print(f"Error: {slurm_result_bs_algorithm.stderr}")
+        # job_id = slurm_result_bs_algorithm.stdout.strip().split()[-1]
+        # print(f"Submitted SLURM job with ID {job_id}")
+
+        # # Check the job status until it completes
+        # def is_job_finished(job_id):
+        #     result = subprocess.run(["squeue", "--job", job_id], capture_output=True, text=True)
+        #     return job_id not in result.stdout
+
+        # # Polling loop: wait for the job to finish
+        # while not is_job_finished(job_id):
+        #     print(f"Waiting for SLURM job {job_id} to complete...")
+        #     time.sleep(10)  # Check every 10 seconds
+
+        # Define the path to the result file
+        result_file = os.path.join(main_building_sizer_request_directory, "results", "status.json")
+
+        # Once the job is finished, check if the result file exists
+        timeout = 600  # Timeout in seconds (adjust as needed)
+        start_time = time.time()
+        while not os.path.exists(result_file):
+            if time.time() - start_time > timeout:
+                raise TimeoutError(f"Result file '{result_file}' was not created within the timeout period.")
+            print(f"Waiting for '{result_file}' to be created...")
+            time.sleep(10)
+
+        # Once the file exists, read it
         # Get the content of the result file created by the Building Sizer
-        # status_json = result.data["status.json"].decode()
         with open(
-            os.path.join(
-                main_building_sizer_request_directory, "results", "status.json"
-            ),
+            result_file,
             "r",
             encoding="utf-8",
         ) as file:
             status_json = json.load(file)
+            print("File read successfully:", status_json)
         building_sizer_result: BuildingSizerResult = BuildingSizerResult.from_dict(status_json)  # type: ignore
 
         # Check if this was the final iteration and the building sizer is finished

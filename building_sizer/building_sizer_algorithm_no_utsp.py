@@ -10,7 +10,8 @@ for the next Building Sizer iteration as a result to the UTSP (and thereby also 
 """
 
 import dataclasses
-
+import time
+import subprocess
 from typing import Any, Dict, List, Optional, Tuple
 import json
 import os
@@ -20,6 +21,7 @@ import sys
 from building_sizer import (
     individual_encoding_no_utsp,
     evolutionary_algorithm_no_utsp as evo_alg,
+    hisim_simulation_no_utsp
 )
 
 # Add the parent directory to the system path
@@ -236,10 +238,9 @@ def get_results_from_requisite_hisim_configs(
         PostProcessingOptions.COMPUTE_CAPEX
     )
     my_simulation_parameters.post_processing_options.append(
-        PostProcessingOptions.COMPUTE_KPIS_AND_WRITE_TO_REPORT
-    )
+        PostProcessingOptions.COMPUTE_KPIS)
     my_simulation_parameters.post_processing_options.append(
-        PostProcessingOptions.WRITE_ALL_KPIS_TO_JSON
+        PostProcessingOptions.WRITE_KPIS_TO_JSON
     )
     my_simulation_parameters.post_processing_options.append(
         PostProcessingOptions.WRITE_KPIS_TO_JSON_FOR_BUILDING_SIZER
@@ -296,6 +297,91 @@ def get_results_from_requisite_hisim_configs(
         result_dict.update({hisim_config_path: kpis_building_sizer})
     return result_dict
 
+def get_results_from_requisite_hisim_configs_slurm(
+    requisite_hisim_config_paths: List[str], main_building_sizer_request_directory: str
+) -> Dict[str, Dict]:
+    """
+    Collects the results from the HiSim requests sent in the previous iteration.
+
+    :param requisite_requests: List of previous HiSIM requests
+    :type requisite_requests: List[TimeSeriesRequest]
+    :param url: url for connection to the UTSP
+    :type url: str
+    :param api_key: password for the connection to the UTSP
+    :type api_key: str
+    :return: dictionary of processed hisim requests (HiSIM results)
+    :rtype: Dict[str, ResultDelivery]
+    """
+    # run HiSim for each config and get kpis and store in dictionary
+    # Step 1: Check if result_dict_path exists, if not create an empty dict in it
+    result_dict_path = os.path.join(main_building_sizer_request_directory, "result_dict.json")
+    result_dict: Dict = {}
+    if not os.path.exists(result_dict_path):
+        with open(result_dict_path, 'w') as file:
+            json.dump(result_dict, file)
+    # set simulation parameters here
+    year = 2021
+    seconds_per_timestep = 60 * 15
+    my_simulation_parameters = SimulationParameters.one_day_only(
+        year=year, seconds_per_timestep=seconds_per_timestep
+    )
+    # set postprocessing options
+    my_simulation_parameters.post_processing_options.append(
+        PostProcessingOptions.PREPARE_OUTPUTS_FOR_SCENARIO_EVALUATION
+    )
+    my_simulation_parameters.post_processing_options.append(
+        PostProcessingOptions.COMPUTE_OPEX
+    )
+    my_simulation_parameters.post_processing_options.append(
+        PostProcessingOptions.COMPUTE_CAPEX
+    )
+    my_simulation_parameters.post_processing_options.append(
+        PostProcessingOptions.COMPUTE_KPIS)
+    my_simulation_parameters.post_processing_options.append(
+        PostProcessingOptions.WRITE_KPIS_TO_JSON
+    )
+    my_simulation_parameters.post_processing_options.append(
+        PostProcessingOptions.WRITE_KPIS_TO_JSON_FOR_BUILDING_SIZER
+    )
+    # set logging level to 1
+    my_simulation_parameters.logging_level = 3
+
+    for index, hisim_config_path in enumerate(requisite_hisim_config_paths):
+        # Get result by calling building_sizer_algorithm_no_utsp on cluster
+
+        # SLURM script to execute
+        slurm_script = "/fast/home/k-rieck/HiSim-Building-Sizer/cluster_requests/job_array_hisim_simulation.sh"
+
+        # Call the SLURM script with subprocess and pass the two parameters
+        slurm_result_hisim_simulation = subprocess.run(["sbatch", slurm_script, hisim_config_path, "household_cluster", main_building_sizer_request_directory, result_dict_path], check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        # Extract the job ID from the output of `sbatch`
+        # if stdout is none check if any errors occured
+        if slurm_result_hisim_simulation.stdout is None:
+            print(f"Error: {slurm_result_hisim_simulation.stderr}")
+        job_id = slurm_result_hisim_simulation.stdout.strip().split()[-1]
+        print(f"Submitted SLURM job with ID {job_id}")
+
+        # Local alternative execution
+        # hisim_simulation_no_utsp.run_hisim_simulation_and_collect_kpis(hisim_config_path, "household_cluster", main_building_sizer_request_directory, result_dict_path)
+
+    # Once the job is finished, check if the result file exists
+    timeout = 600  # Timeout in seconds (adjust as needed)
+    start_time = time.time()
+
+    while not result_dict:
+        with open(result_dict_path, "r", encoding="utf-8") as result_file:
+            result_dict = json.load(result_file)
+        if time.time() - start_time > timeout:
+            raise TimeoutError(f"Result dict {result_dict_path} was not filled within the timeout period.")
+        print(f"Waiting for result dict {result_dict_path} to be filled with values...")
+        time.sleep(10)
+
+    if result_dict:
+        return result_dict
+    else:
+        raise ValueError("Result dict is empty ", result_dict)
+
 
 def trigger_next_iteration(
     request: BuildingSizerRequest,
@@ -350,7 +436,7 @@ def building_sizer_iteration(
              the result of this iteration
     :rtype: Tuple[Optional[TimeSeriesRequest], Any]
     """
-    result_dict = get_results_from_requisite_hisim_configs(
+    result_dict = get_results_from_requisite_hisim_configs_slurm(
         request.requisite_hisim_config_paths, main_building_sizer_request_directory
     )
 
@@ -461,3 +547,17 @@ def main_without_utsp(
         os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w+", encoding="utf-8") as result_file:
         result_file.write(building_sizer_result_json)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        log.information("Building sizer algorithm needs two arguments.")
+        sys.exit(1)
+    BUILDING_SIZER_REQUEST_JSON = sys.argv[1]
+    REQUEST_DIRECTORY = sys.argv[2]
+    # Deserialize the JSON string into a Python dictionary
+    BUILDING_SIZER_REQUEST = BuildingSizerRequest.from_json(BUILDING_SIZER_REQUEST_JSON)
+
+    print("calling " + str(BUILDING_SIZER_REQUEST) + " with request directory " + REQUEST_DIRECTORY)
+    main_without_utsp(request=BUILDING_SIZER_REQUEST,
+            main_building_sizer_request_directory=REQUEST_DIRECTORY)

@@ -135,3 +135,5 @@ dmypy.json
 /building_sizer/default_module_config.json
 /building_sizer/*.txt
 /building_sizer/*.prof
+
+/cluster_requests/slurm_output_files
