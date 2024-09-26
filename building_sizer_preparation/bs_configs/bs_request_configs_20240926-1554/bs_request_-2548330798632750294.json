@@ -1,0 +1,74 @@
+{
+    "initial_building_sizer_request": {
+        "remaining_iterations": 4,
+        "discrete_iterations": 4,
+        "population_size": 3,
+        "crossover_probability": 0.5,
+        "mutation_probability": 0.5,
+        "options": {
+            "share_of_maximum_pv_potential": [
+                0.0,
+                0.1,
+                0.2,
+                0.3,
+                0.4,
+                0.5,
+                0.6,
+                0.7,
+                0.8,
+                0.9,
+                1.0
+            ],
+            "heating_system": [
+                "HeatPump",
+                "GasHeating"
+            ],
+            "discrete_attributes": [
+                "share_of_maximum_pv_potential",
+                "heating_system"
+            ]
+        },
+        "kpi_for_rating": "Total Costs [\u20ac]",
+        "archetype_config_": {
+            "building_name": "BUI1",
+            "building_id": "DEG_DETHL56P0000iNug",
+            "pv_azimuth": 174.6526870536033,
+            "pv_tilt": 10.120735723628275,
+            "pv_rooftop_capacity_in_kilowatt": 2.571,
+            "pv_rooftop_generation_in_kilowatthour": 2730.585,
+            "building_code": "DE.N.SFH.06.Gen.ReEx.001.002",
+            "conditioned_floor_area_in_m2": 57,
+            "number_of_dwellings_per_building": 1,
+            "norm_heating_load_in_kilowatt": 3.25,
+            "weather_location": "HOF",
+            "weather_try_region": 10,
+            "building_postal_code": "7422",
+            "building_location": "Bad Blankenburg, Saalfelder H\u00f6he",
+            "lpg_households": [
+                "CHR10_Single_man_30_64_age_shift_worker"
+            ],
+            "commodity": "electric",
+            "supply_level": "central_heating"
+        },
+        "requisite_hisim_config_paths": []
+    },
+    "hisim_simulation_parameters": {
+        "startDate": "2021-01-01T00:00:00",
+        "endDate": "2022-01-01T00:00:00",
+        "secondsPerTimestep": 900,
+        "postProcessingOptions": [
+            21,
+            18,
+            19,
+            20,
+            25,
+            24
+        ],
+        "loggingLevel": 3,
+        "resultDirectory": "",
+        "skipFinishedResults": false,
+        "surplusControl": true,
+        "cacheDirPath": "/fast/home/k-rieck/repositories/HiSim/hisim/inputs/cache",
+        "multipleBuildings": false
+    }
+}

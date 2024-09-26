@@ -1,0 +1,74 @@
+{
+    "initial_building_sizer_request": {
+        "remaining_iterations": 4,
+        "discrete_iterations": 4,
+        "population_size": 3,
+        "crossover_probability": 0.5,
+        "mutation_probability": 0.5,
+        "options": {
+            "share_of_maximum_pv_potential": [
+                0.0,
+                0.1,
+                0.2,
+                0.3,
+                0.4,
+                0.5,
+                0.6,
+                0.7,
+                0.8,
+                0.9,
+                1.0
+            ],
+            "heating_system": [
+                "HeatPump",
+                "GasHeating"
+            ],
+            "discrete_attributes": [
+                "share_of_maximum_pv_potential",
+                "heating_system"
+            ]
+        },
+        "kpi_for_rating": "Total Costs [\u20ac]",
+        "archetype_config_": {
+            "building_name": "BUI1",
+            "building_id": "DE2_DEBY_LOD2_107507857",
+            "pv_azimuth": 265.1629865828116,
+            "pv_tilt": 39.34018754642371,
+            "pv_rooftop_capacity_in_kilowatt": 11.472,
+            "pv_rooftop_generation_in_kilowatthour": 10667.049,
+            "building_code": "DE.N.SFH.04.Gen.ReEx.001.001",
+            "conditioned_floor_area_in_m2": 126,
+            "number_of_dwellings_per_building": 1,
+            "norm_heating_load_in_kilowatt": 20.37,
+            "weather_location": "GARMISCH_PARTENKIRCHEN",
+            "weather_try_region": 15,
+            "building_postal_code": "83627",
+            "building_location": "Warngau",
+            "lpg_households": [
+                "CHR13_Student_with_Work"
+            ],
+            "commodity": "electric",
+            "supply_level": "central_heating"
+        },
+        "requisite_hisim_config_paths": []
+    },
+    "hisim_simulation_parameters": {
+        "startDate": "2021-01-01T00:00:00",
+        "endDate": "2022-01-01T00:00:00",
+        "secondsPerTimestep": 900,
+        "postProcessingOptions": [
+            21,
+            18,
+            19,
+            20,
+            25,
+            24
+        ],
+        "loggingLevel": 3,
+        "resultDirectory": "",
+        "skipFinishedResults": false,
+        "surplusControl": true,
+        "cacheDirPath": "/fast/home/k-rieck/repositories/HiSim/hisim/inputs/cache",
+        "multipleBuildings": false
+    }
+}

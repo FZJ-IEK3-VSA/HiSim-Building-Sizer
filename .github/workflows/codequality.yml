@@ -32,4 +32,5 @@ jobs:
     - name: Lint with prospector
       working-directory: ./
       run: |
-        prospector building_sizer/
+        prospector building_sizer_execution/
+        prospector building_sizer_preparation/

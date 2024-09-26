@@ -131,9 +131,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-/building_sizer/bs_request*
-/building_sizer/default_module_config.json
-/building_sizer/*.txt
-/building_sizer/*.prof
+/building_sizer_results/bs_request*
+/building_sizer_execution/*.txt
+/building_sizer_execution/*.prof
 
 /cluster_requests/slurm_output_files

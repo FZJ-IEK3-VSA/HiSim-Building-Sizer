@@ -1,0 +1,75 @@
+{
+    "initial_building_sizer_request": {
+        "remaining_iterations": 4,
+        "discrete_iterations": 4,
+        "population_size": 3,
+        "crossover_probability": 0.5,
+        "mutation_probability": 0.5,
+        "options": {
+            "share_of_maximum_pv_potential": [
+                0.0,
+                0.1,
+                0.2,
+                0.3,
+                0.4,
+                0.5,
+                0.6,
+                0.7,
+                0.8,
+                0.9,
+                1.0
+            ],
+            "heating_system": [
+                "HeatPump",
+                "GasHeating"
+            ],
+            "discrete_attributes": [
+                "share_of_maximum_pv_potential",
+                "heating_system"
+            ]
+        },
+        "kpi_for_rating": "Total Costs [\u20ac]",
+        "archetype_config_": {
+            "building_name": "BUI1",
+            "building_id": "DE2_DEBY_LOD2_3214214",
+            "pv_azimuth": 252.902085769541,
+            "pv_tilt": 43.91568990519243,
+            "pv_rooftop_capacity_in_kilowatt": 16.615,
+            "pv_rooftop_generation_in_kilowatthour": 13677.748,
+            "building_code": "DE.N.SFH.05.Gen.ReEx.001.001",
+            "conditioned_floor_area_in_m2": 261,
+            "number_of_dwellings_per_building": 2,
+            "norm_heating_load_in_kilowatt": 38.42,
+            "weather_location": "MUEHLDORF",
+            "weather_try_region": 13,
+            "building_postal_code": "90439",
+            "building_location": "N\u00fcrnberg",
+            "lpg_households": [
+                "CHR14_3_adults_Couple_30_64_years_both_at_work_Senior_at_home",
+                "CHR42_Single_man_with_2_children_with_work"
+            ],
+            "commodity": "electric",
+            "supply_level": "central_heating"
+        },
+        "requisite_hisim_config_paths": []
+    },
+    "hisim_simulation_parameters": {
+        "startDate": "2021-01-01T00:00:00",
+        "endDate": "2022-01-01T00:00:00",
+        "secondsPerTimestep": 900,
+        "postProcessingOptions": [
+            21,
+            18,
+            19,
+            20,
+            25,
+            24
+        ],
+        "loggingLevel": 3,
+        "resultDirectory": "",
+        "skipFinishedResults": false,
+        "surplusControl": true,
+        "cacheDirPath": "/fast/home/k-rieck/repositories/HiSim/hisim/inputs/cache",
+        "multipleBuildings": false
+    }
+}
