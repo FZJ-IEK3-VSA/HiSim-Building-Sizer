@@ -51,12 +51,12 @@ class SizingOptions:
         is also attribute of class SystemConfig."""
         for name in self.bool_attributes + self.discrete_attributes:
             if not hasattr(SystemConfig, name):
-                raise Exception(
+                raise AttributeError(
                     f"Invalid vector attribute: SystemConfig has no member '{name}'"
                 )
         for name in self.discrete_attributes:
             if not hasattr(self, name):
-                raise Exception(
+                raise AttributeError(
                     f"Missing list of allowed values: SizingOptions has no member '{name} '"
                     f"specifying allowed values for the attribute of the same name"
                 )
@@ -67,6 +67,7 @@ class SizingOptions:
 class Individual:
 
     """System config as numerical vectors. """
+
     #: encoding of the individual (HiSIM configuration) of the boolean part - each digit decides if related technology is included or not
     bool_vector: List[bool] = field(default_factory=list)
     #: encoding of the individual (HiSIM configuration) of the discrete part - each digit describes the size of the considered technology

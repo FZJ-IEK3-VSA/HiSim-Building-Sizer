@@ -27,7 +27,10 @@ from utspclient.datastructures import (
     TimeSeriesRequest,
 )
 
-from building_sizer import individual_encoding, evolutionary_algorithm as evo_alg
+from building_sizer_execution import (
+    individual_encoding,
+    evolutionary_algorithm as evo_alg,
+)
 
 
 @dataclasses_json.dataclass_json
@@ -38,6 +41,7 @@ class BuildingSizerRequest:
     a single building sizer iteration. Can be used to create the request object
     for the subsequent iteration.
     """
+
     #: url for connection to the UTSP
     url: str
     #: password for the connection to the UTSP
@@ -62,7 +66,7 @@ class BuildingSizerRequest:
     mutation_probability: float = 0.4
     #: SizingOptions object, containing information for decoding and encoding individuals
     options: individual_encoding.SizingOptions = dataclasses.field(
-        default=individual_encoding.SizingOptions()
+        default_factory=individual_encoding.SizingOptions()
     )
 
     # parameters for HiSim
@@ -243,8 +247,8 @@ def decide_on_mode(
     iteration_in_subiteration = iteration % (boolean_iterations + discrete_iterations)
     if iteration_in_subiteration > discrete_iterations:
         return "bool"
-    else:
-        return "discrete"
+
+    return "discrete"
 
 
 def building_sizer_iteration(
@@ -337,7 +341,7 @@ def main():
 
     # Read the request file
     input_path = "/input/request.json"
-    with open(input_path) as input_file:
+    with open(input_path, "r", encoding="utf-8") as input_file:
         request_json = input_file.read()
     request: BuildingSizerRequest = BuildingSizerRequest.from_json(request_json)  # type: ignore
     # Check if there are hisim requests from previous iterations
@@ -357,7 +361,7 @@ def main():
     building_sizer_result = BuildingSizerResult(finished, next_request, result)
     building_sizer_result_json = building_sizer_result.to_json()  # type: ignore
 
-    with open("/results/status.json", "w+") as result_file:
+    with open("/results/status.json", "w+", encoding="utf-8") as result_file:
         result_file.write(building_sizer_result_json)
 
 

@@ -1,8 +1,6 @@
 """Sends a building sizer request to the UTSP and waits until the calculation is finished."""
 
 import json
-import random
-import string
 from datetime import datetime
 from typing import Dict, Iterable, List
 
@@ -12,8 +10,8 @@ from hisim.modular_household.interface_configs import kpi_config  # type: ignore
 from utspclient import client  # type: ignore
 from utspclient.datastructures import TimeSeriesRequest  # type: ignore
 
-from building_sizer import building_sizer_algorithm, individual_encoding
-from building_sizer.building_sizer_algorithm import (
+from building_sizer_execution import building_sizer_algorithm, individual_encoding
+from building_sizer_execution.building_sizer_algorithm import (
     BuildingSizerRequest,
     BuildingSizerResult,
 )
@@ -95,7 +93,6 @@ def minimize_config(hisim_config: str) -> str:
     :return: a system configuration of HiSIM containing only the parameters changing within the evolutionary algorithm
     :rtype: str
     """
-    import json
 
     modular_hh_config = json.loads(hisim_config)
     sys_config = modular_hh_config["system_config_"]
@@ -168,9 +165,7 @@ def main():
     )
     # Create the initial building sizer request
     building_sizer_request = TimeSeriesRequest(
-        building_sizer_config_json,
-        provider_name,
-        guid=guid,
+        building_sizer_config_json, provider_name, guid=guid,
     )
 
     # Store the hash of each request in a set for loop detection
