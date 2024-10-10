@@ -130,13 +130,13 @@ def main():
     # Create an initial simulation configuration for the building sizer
     options = SizingOptions()
     initial_building_sizer_request = BuildingSizerRequest(
-        remaining_iterations=4,
-        discrete_iterations=4,
-        population_size=3,
+        remaining_iterations=6,
+        discrete_iterations=6,
+        population_size=6,
         crossover_probability=0.5,
         mutation_probability=0.5,
         options=options,
-        kpi_for_rating=KPIForRatingInOptimization.TOTAL_COSTS,
+        kpi_for_rating=KPIForRatingInOptimization.INVESTMENT_COSTS,
     )
     # -----------------------------------------------------------------------------------------------------------
     # Set hisim simulation parameters

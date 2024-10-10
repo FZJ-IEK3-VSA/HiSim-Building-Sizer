@@ -210,73 +210,73 @@ def create_subsequent_building_sizer_request(
     return subsequent_building_sizer_request
 
 
-# def get_results_from_requisite_hisim_configs(
-#     requisite_hisim_config_paths: List[str], main_building_sizer_request_directory: str, hisim_simulation_parameters: SimulationParameters
-# ) -> Dict[str, Dict]:
-#     """
-#     Collects the results from the HiSim requests sent in the previous iteration.
+def get_results_from_requisite_hisim_configs(
+    requisite_hisim_config_paths: List[str], main_building_sizer_request_directory: str, hisim_simulation_parameters: SimulationParameters
+) -> Dict[str, Dict]:
+    """
+    Collects the results from the HiSim requests sent in the previous iteration.
 
-#     :param requisite_requests: List of previous HiSIM requests
-#     :type requisite_requests: List[TimeSeriesRequest]
-#     :param url: url for connection to the UTSP
-#     :type url: str
-#     :param api_key: password for the connection to the UTSP
-#     :type api_key: str
-#     :return: dictionary of processed hisim requests (HiSIM results)
-#     :rtype: Dict[str, ResultDelivery]
-#     """
-#     # run HiSim for each config and get kpis and store in dictionary
-#     # set result dictionary
-#     result_dict: Dict = {}
+    :param requisite_requests: List of previous HiSIM requests
+    :type requisite_requests: List[TimeSeriesRequest]
+    :param url: url for connection to the UTSP
+    :type url: str
+    :param api_key: password for the connection to the UTSP
+    :type api_key: str
+    :return: dictionary of processed hisim requests (HiSIM results)
+    :rtype: Dict[str, ResultDelivery]
+    """
+    # run HiSim for each config and get kpis and store in dictionary
+    # set result dictionary
+    result_dict: Dict = {}
 
-#     for index, hisim_config_path in enumerate(requisite_hisim_config_paths):
-#         # set hisim results directory
-#         # if requisite_hisim_config_path is given, get hash number and sampling mode for result path
-#         if hisim_config_path is not None:
-#             config_filename_splitted = hisim_config_path.split("/")
-#             scenario_hash_string = re.findall(r"\-?\d+", config_filename_splitted[-1])[
-#                 0
-#             ]
-#             further_result_folder_description = config_filename_splitted[-2]
+    for index, hisim_config_path in enumerate(requisite_hisim_config_paths):
+        # set hisim results directory
+        # if requisite_hisim_config_path is given, get hash number and sampling mode for result path
+        if hisim_config_path is not None:
+            config_filename_splitted = hisim_config_path.split("/")
+            scenario_hash_string = re.findall(r"\-?\d+", config_filename_splitted[-1])[
+                0
+            ]
+            further_result_folder_description = config_filename_splitted[-2]
 
-#         hisim_result_directory = os.path.join(
-#             main_building_sizer_request_directory, "hisim_results"
-#         )
-#         household_module = "household_cluster"
-#         ResultPathProviderSingleton().set_important_result_path_information(
-#             module_directory=hisim_result_directory,
-#             model_name=household_module,
-#             further_result_folder_description=os.path.join(
-#                 *[further_result_folder_description,]
-#             ),
-#             variant_name="_",
-#             scenario_hash_string=scenario_hash_string,
-#             sorting_option=SortingOptionEnum.MASS_SIMULATION_WITH_HASH_ENUMERATION,
-#         )
-#         # make dir if not exist yet
-#         if not os.path.isdir(ResultPathProviderSingleton().get_result_directory_name()):
-#             os.makedirs(ResultPathProviderSingleton().get_result_directory_name())
-#         hisim_simulation_parameters.result_directory = (
-#             ResultPathProviderSingleton().get_result_directory_name()
-#         )
-#         # run hisim simulation
-#         hisim_main.main(
-#             path_to_module=f"/fast/home/k-rieck/repositories/HiSim/system_setups/{household_module}.py",
-#             my_module_config=hisim_config_path,
-#             my_simulation_parameters=hisim_simulation_parameters,
-#         )
-#         print(f"-----hisim simualtion {index} finsihed!-----", "\n", "\n")
-#         # get results for each simulation
-#         kpi_json = "kpi_config_for_building_sizer.json"
-#         with open(
-#             os.path.join(hisim_simulation_parameters.result_directory, kpi_json),
-#             "r",
-#             encoding="utf-8",
-#         ) as result_file:
-#             kpis_building_sizer = json.load(result_file)
-#         # add configs and respective kpis to dictionary
-#         result_dict.update({hisim_config_path: kpis_building_sizer})
-#     return result_dict
+        hisim_result_directory = os.path.join(
+            main_building_sizer_request_directory, "hisim_results"
+        )
+        household_module = "household_gas_or_heatpump"
+        ResultPathProviderSingleton().set_important_result_path_information(
+            module_directory=hisim_result_directory,
+            model_name=household_module,
+            further_result_folder_description=os.path.join(
+                *[further_result_folder_description,]
+            ),
+            variant_name="_",
+            scenario_hash_string=scenario_hash_string,
+            sorting_option=SortingOptionEnum.MASS_SIMULATION_WITH_HASH_ENUMERATION,
+        )
+        # make dir if not exist yet
+        if not os.path.isdir(ResultPathProviderSingleton().get_result_directory_name()):
+            os.makedirs(ResultPathProviderSingleton().get_result_directory_name())
+        hisim_simulation_parameters.result_directory = (
+            ResultPathProviderSingleton().get_result_directory_name()
+        )
+        # run hisim simulation
+        hisim_main.main(
+            path_to_module=f"/fast/home/k-rieck/repositories/HiSim/system_setups/{household_module}.py",
+            my_module_config=hisim_config_path,
+            my_simulation_parameters=hisim_simulation_parameters,
+        )
+        print(f"-----hisim simualtion {index} finsihed!-----", "\n", "\n")
+        # get results for each simulation
+        kpi_json = "kpi_config_for_building_sizer.json"
+        with open(
+            os.path.join(hisim_simulation_parameters.result_directory, kpi_json),
+            "r",
+            encoding="utf-8",
+        ) as result_file:
+            kpis_building_sizer = json.load(result_file)
+        # add configs and respective kpis to dictionary
+        result_dict.update({hisim_config_path: kpis_building_sizer})
+    return result_dict
 
 
 def get_results_from_requisite_hisim_configs_slurm(
@@ -305,7 +305,7 @@ def get_results_from_requisite_hisim_configs_slurm(
     if not os.path.exists(result_dict_path):
         with open(result_dict_path, "w") as file:
             json.dump(result_dict, file)
-
+    job_ids = []
     for index, hisim_config_path in enumerate(requisite_hisim_config_paths):
         # Get result by calling building_sizer_algorithm_no_utsp on cluster
         # Serialize the `building_sizer_request` object to a JSON string
@@ -336,14 +336,44 @@ def get_results_from_requisite_hisim_configs_slurm(
             print(f"Error: {slurm_result_hisim_simulation.stderr}")
         job_id = slurm_result_hisim_simulation.stdout.strip().split()[-1]
         print(f"Submitted SLURM job with ID {job_id}")
+        job_ids.append(job_id)
+    # Get the job state from the output
+    # job_state = slurm_result_hisim_simulation.stdout.strip()
+    # print("job state ", job_state)
+    print("job ids", job_ids)
+    # Wait for all SLURM jobs in job_ids to finish.
+    while True:
+        all_done = True
+        for job_id in job_ids:
+            # Check the status of a SLURM job using sacct.#
+            try:
+                result = subprocess.run(
+                    ["squeue", "-j", str(job_id), "--noheader"],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                # Get the job state from the output
+                job_state = result.stdout.strip()
+                print("job state while checking status", job_state)
+            except subprocess.CalledProcessError as e:
+                print(f"Error checking job status for {job_id}: {e}")
+                job_state = None
 
-        # Local alternative execution
-        # hisim_simulation_no_utsp.run_hisim_simulation_and_collect_kpis(hisim_config_path, "household_cluster", main_building_sizer_request_directory, result_dict_path)
+            if job_state not in ["COMPLETED", "FAILED", "CANCELLED", ""]:
+                all_done = False
+                break
+
+        if all_done:
+            print("All jobs are done.")
+            break
+        else:
+            print("Waiting for jobs to finish...")
+            time.sleep(30)  # Wait for 1 minute before checking again
 
     # Once the job is finished, check if the result file exists
     timeout = 600  # Timeout in seconds (adjust as needed)
     start_time = time.time()
-
     while not result_dict:
         with open(result_dict_path, "r", encoding="utf-8") as result_file:
             result_dict = json.load(result_file)
@@ -421,6 +451,12 @@ def building_sizer_iteration(
         main_building_sizer_request_directory,
         hisim_simulation_parameters,
     )
+    print("result dict length after serialized slurm jobs", len(result_dict))
+    # result_dict = get_results_from_requisite_hisim_configs(
+    #     request.requisite_hisim_config_paths,
+    #     main_building_sizer_request_directory,
+    #     hisim_simulation_parameters,
+    # )
 
     # Get the relevant result files from all requisite requests and turn them into rated individuals
     rated_individuals = []

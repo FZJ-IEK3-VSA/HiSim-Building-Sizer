@@ -9,7 +9,7 @@
 #SBATCH --nice=10
 
 # Specify the path to the config file
-config=/fast/home/k-rieck/HiSim-Building-Sizer/building_sizer_preparation/bs_job_arrays/bs_job_array_20240926-0953.csv
+config=/fast/home/k-rieck/HiSim-Building-Sizer/building_sizer_preparation/bs_job_arrays_for_testing/bs_job_array_20241001-1027.csv
 
 # Extract the config path for the current $SLURM_ARRAY_TASK_ID
 bs_config_path=$(awk -F',' -v ArrayTaskID=$SLURM_ARRAY_TASK_ID '$1==ArrayTaskID {print $2}' $config)
