@@ -5,6 +5,8 @@ import json
 import datetime
 import csv
 from typing import Dict, List
+# Add the parent directory to the system path
+sys.path.append("/fast/home/k-rieck/HiSim-Building-Sizer/")
 from building_sizer_execution.building_sizer_algorithm_no_utsp import (
     BuildingSizerRequest,
 )
@@ -61,7 +63,7 @@ def write_job_array_config_file(
                 [str(index), os.path.join(directory_with_all_configs, config_path)]
             )
             index = index + 1
-
+    print("Saved job array config file here: ", job_array_config_csv_file)
 
 def generate_configs_for_building_sizer_request(
     path_to_archetype_config_collection: str,
@@ -81,10 +83,9 @@ def generate_configs_for_building_sizer_request(
     for index, building_archetype_config in enumerate(
         list_with_building_archetype_configs
     ):
-
         # get dict of initial building sizer request and add building archetype dict to intial building sizer request
         building_archetype_config: ArcheTypeConfig = ArcheTypeConfig.from_dict(
-            building_archetype_config
+            building_archetype_config["archetype_config_"]
         )
         initial_building_sizer_request.archetype_config_ = building_archetype_config
         initial_building_sizer_request_dict: Dict = {
@@ -99,6 +100,7 @@ def generate_configs_for_building_sizer_request(
 
         # get hash of combined dict
         config_str = json.dumps(combined_dict, indent=4)
+        # print("config str", config_str)
         config_str_hash = hash(config_str)
         # prepare folder to save
         now = datetime.datetime.now().strftime("%Y%m%d-%H%M")
@@ -112,6 +114,7 @@ def generate_configs_for_building_sizer_request(
         json_filename = os.path.join(folder, f"bs_request_{config_str_hash}.json")
         with open(json_filename, "w", encoding="utf-8") as config_file:
             config_file.write(config_str)
+        print("Saved building sizer config here: ", json_filename)
     # write all config filepaths to csv to create job array
     job_array_config_folder = os.path.abspath(
         os.path.join(path_to_save_building_sizer_configs, os.pardir, "bs_job_arrays")
@@ -124,7 +127,7 @@ def generate_configs_for_building_sizer_request(
     print("Generation of building sizer configs was successful.")
 
 
-def main():
+def main(path_to_archetype_config_collection: str):
     """Run config generation for building sizer execution."""
     # -----------------------------------------------------------------------------------------------------------
     # Create an initial simulation configuration for the building sizer
@@ -136,7 +139,7 @@ def main():
         crossover_probability=0.5,
         mutation_probability=0.5,
         options=options,
-        kpi_for_rating=KPIForRatingInOptimization.INVESTMENT_COSTS,
+        kpi_for_rating=KPIForRatingInOptimization.TOTAL_COSTS,
     )
     # -----------------------------------------------------------------------------------------------------------
     # Set hisim simulation parameters
@@ -168,7 +171,7 @@ def main():
     my_simulation_parameters.logging_level = 3
     # -----------------------------------------------------------------------------------------------------------
     # path to building archetype collection
-    path_to_archetype_config_collection = "/fast/home/k-rieck/jobs_hisim/cluster-hisim-paper/job_array_for_hisim_mass_simus/hisim_config_collection/builda_samples_20240924_1024_for_building_sizer"
+    # path_to_archetype_config_collection = "/fast/home/k-rieck/jobs_hisim/cluster-hisim-paper/job_array_for_hisim_mass_simus/hisim_config_collection/builda_samples_20240924_1024_for_building_sizer"
     # path to building sizer configs
     path_to_save_building_sizer_configs = (
         "/fast/home/k-rieck/HiSim-Building-Sizer/building_sizer_preparation/bs_configs"
@@ -188,4 +191,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    PATH_TO_HISIM_ARCHETYPE_CONFIGS = "/fast/home/k-rieck/jobs_hisim/cluster-hisim-paper/job_array_for_hisim_mass_simus/hisim_config_collection/builda_samples_20250710_1054"
+    main(path_to_archetype_config_collection=PATH_TO_HISIM_ARCHETYPE_CONFIGS)

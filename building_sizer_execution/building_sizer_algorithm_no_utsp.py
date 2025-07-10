@@ -46,7 +46,7 @@ from hisim.result_path_provider import (
     ResultPathProviderSingleton,
     SortingOptionEnum,
 )
-
+from hisim.loadtypes import HeatingSystems
 
 @dataclasses_json.dataclass_json
 @dataclasses.dataclass
@@ -209,6 +209,18 @@ def create_subsequent_building_sizer_request(
 
     return subsequent_building_sizer_request
 
+def decide_based_on_hisim_config_which_module_to_choose(hisim_config_path: str) -> str:
+    """Read the heating system from config and decide which hisim system setup will be chosen."""
+    with open(hisim_config_path, "r", encoding="utf-8") as file:
+        config = json.load(file)
+        heating_system = str(config["energy_system_config_"]["heating_system"])
+        if heating_system == HeatingSystems.HEAT_PUMP:
+            hisim_module = "household_heatpump_building_sizer"
+        elif heating_system == HeatingSystems.GAS_HEATING:
+            hisim_module = "household_gas_building_sizer"
+        else:
+            raise ValueError(f"Heating system {heating_system} not recognized.")
+    return hisim_module
 
 def get_results_from_requisite_hisim_configs(
     requisite_hisim_config_paths: List[str], main_building_sizer_request_directory: str, hisim_simulation_parameters: SimulationParameters
@@ -242,10 +254,11 @@ def get_results_from_requisite_hisim_configs(
         hisim_result_directory = os.path.join(
             main_building_sizer_request_directory, "hisim_results"
         )
-        household_module = "household_gas_or_heatpump"
+        # Select hisim module
+        hisim_module = decide_based_on_hisim_config_which_module_to_choose(hisim_config_path=hisim_config_path)
         ResultPathProviderSingleton().set_important_result_path_information(
             module_directory=hisim_result_directory,
-            model_name=household_module,
+            model_name=hisim_module,
             further_result_folder_description=os.path.join(
                 *[further_result_folder_description,]
             ),
@@ -261,7 +274,7 @@ def get_results_from_requisite_hisim_configs(
         )
         # run hisim simulation
         hisim_main.main(
-            path_to_module=f"/fast/home/k-rieck/repositories/HiSim/system_setups/{household_module}.py",
+            path_to_module=f"/fast/home/k-rieck/repositories/HiSim/system_setups/{hisim_module}.py",
             my_module_config=hisim_config_path,
             my_simulation_parameters=hisim_simulation_parameters,
         )
@@ -312,14 +325,15 @@ def get_results_from_requisite_hisim_configs_slurm(
         json_hisim_params = json.dumps(hisim_simulation_parameters.to_dict())
         # SLURM script to execute
         slurm_script = "/fast/home/k-rieck/HiSim-Building-Sizer/cluster_requests/job_array_hisim_simulation.sh"
-
+        # Select hisim module
+        hisim_module = decide_based_on_hisim_config_which_module_to_choose(hisim_config_path=hisim_config_path)
         # Call the SLURM script with subprocess and pass the two parameters
         slurm_result_hisim_simulation = subprocess.run(
             [
                 "sbatch",
                 slurm_script,
                 hisim_config_path,
-                "household_gas_or_heatpump",
+                hisim_module,
                 main_building_sizer_request_directory,
                 result_dict_path,
                 json_hisim_params,
