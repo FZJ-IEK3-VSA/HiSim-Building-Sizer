@@ -1,0 +1,33 @@
+{
+    "remaining_iterations": 6,
+    "discrete_iterations": 6,
+    "population_size": 6,
+    "crossover_probability": 0.5,
+    "mutation_probability": 0.5,
+    "options": {
+        "share_of_maximum_pv_potential": [
+            0.0,
+            0.1,
+            0.2,
+            0.3,
+            0.4,
+            0.5,
+            0.6,
+            0.7,
+            0.8,
+            0.9,
+            1.0
+        ],
+        "heating_system": [
+            "HeatPump",
+            "GasHeating"
+        ],
+        "discrete_attributes": [
+            "share_of_maximum_pv_potential",
+            "heating_system"
+        ]
+    },
+    "kpi_for_rating": "Total Costs [\u20ac]",
+    "archetype_config_": null,
+    "requisite_hisim_config_paths": []
+}

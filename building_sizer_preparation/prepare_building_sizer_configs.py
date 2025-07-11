@@ -4,7 +4,8 @@ import os
 import json
 import datetime
 import csv
-from typing import Dict, List
+from typing import Dict, List, Optional
+
 # Add the parent directory to the system path
 sys.path.append("/fast/home/k-rieck/HiSim-Building-Sizer/")
 from building_sizer_execution.building_sizer_algorithm_no_utsp import (
@@ -65,7 +66,8 @@ def write_job_array_config_file(
             index = index + 1
     print("Saved job array config file here: ", job_array_config_csv_file)
 
-def generate_configs_for_building_sizer_request(
+
+def generate_configs_for_building_sizer_request_and_save_job_array(
     path_to_archetype_config_collection: str,
     path_to_save_building_sizer_configs: str,
     initial_building_sizer_request: BuildingSizerRequest,
@@ -100,7 +102,7 @@ def generate_configs_for_building_sizer_request(
 
         # get hash of combined dict
         config_str = json.dumps(combined_dict, indent=4)
-        # print("config str", config_str)
+
         config_str_hash = hash(config_str)
         # prepare folder to save
         now = datetime.datetime.now().strftime("%Y%m%d-%H%M")
@@ -125,6 +127,37 @@ def generate_configs_for_building_sizer_request(
         timestamp=now,
     )
     print("Generation of building sizer configs was successful.")
+
+
+def generate_config_for_building_sizer_request_and_return_config(
+    path_to_archetype_config: str,
+    initial_building_sizer_request: BuildingSizerRequest,
+    hisim_simulation_parameters: SimulationParameters,
+):
+    """Create config for building sizer requests for each building archetype."""
+    # get dict of hisim simulation parameters
+    hisim_simu_params_dict: Dict = {
+        "hisim_simulation_parameters": hisim_simulation_parameters.to_dict()
+    }
+    # read hisim building config
+    with open(path_to_archetype_config, "r", encoding="utf-8") as archetype_config_file:
+        hisim_building_config = json.load(archetype_config_file)
+
+    # get dict of initial building sizer request and add building archetype dict to intial building sizer request
+    building_archetype_config: ArcheTypeConfig = ArcheTypeConfig.from_dict(
+        hisim_building_config["archetype_config_"]
+    )
+    initial_building_sizer_request.archetype_config_ = building_archetype_config
+    initial_building_sizer_request_dict: Dict = {
+        "initial_building_sizer_request": initial_building_sizer_request.to_dict()
+    }
+
+    # combine all data and make one big dict and save as json
+    combined_dict = {
+        **initial_building_sizer_request_dict,
+        **hisim_simu_params_dict,
+    }
+    return combined_dict
 
 
 def main(path_to_archetype_config_collection: str):
@@ -181,12 +214,54 @@ def main(path_to_archetype_config_collection: str):
         f"initial building sizer request {initial_building_sizer_request} \n"
         f"hisim simulation parameters {my_simulation_parameters}."
     )
-    generate_configs_for_building_sizer_request(
+    generate_configs_for_building_sizer_request_and_save_job_array(
         path_to_archetype_config_collection=path_to_archetype_config_collection,
         path_to_save_building_sizer_configs=path_to_save_building_sizer_configs,
         initial_building_sizer_request=initial_building_sizer_request,
         hisim_simulation_parameters=my_simulation_parameters,
     )
+    # -----------------------------------------------------------------------------------------------------------
+
+
+def main_with_inital_request_as_json(
+    path_to_archetype_config_collection: str,
+    path_to_inital_bs_request: Optional[str] = None,
+    path_to_hisim_simu_params: Optional[str] = None,
+):
+    """Run config generation for building sizer execution."""
+    # -----------------------------------------------------------------------------------------------------------
+    # Create an initial simulation configuration for the building sizer
+    if path_to_inital_bs_request is None or path_to_hisim_simu_params is None:
+        print("Use inital bs request and hisim simu params as shown in main().")
+        main(path_to_archetype_config_collection=path_to_archetype_config_collection)
+        exit(0)
+    else:
+        # Read the JSON file
+        with open(path_to_inital_bs_request, "r") as f:
+            print("Read inital bs request from ", path_to_inital_bs_request)
+            json_data_request = f.read()
+        # Parse into a dataclass object
+        initial_building_sizer_request = BuildingSizerRequest.from_json(
+            json_data_request
+        )
+        with open(path_to_hisim_simu_params, "r") as f:
+            print("Read hisim simu params from ", path_to_hisim_simu_params)
+            json_data_simu_params = f.read()
+        my_simulation_parameters = SimulationParameters.from_json(json_data_simu_params)
+
+    # -----------------------------------------------------------------------------------------------------------
+
+    print(
+        "Start generation of building sizer configs with: \n"
+        f"initial building sizer request {initial_building_sizer_request} \n"
+        f"hisim simulation parameters {my_simulation_parameters}."
+    )
+    combined_dict = generate_config_for_building_sizer_request_and_return_config(
+        path_to_archetype_config=path_to_archetype_config_collection,
+        initial_building_sizer_request=initial_building_sizer_request,
+        hisim_simulation_parameters=my_simulation_parameters,
+    )
+    return combined_dict
     # -----------------------------------------------------------------------------------------------------------
 
 

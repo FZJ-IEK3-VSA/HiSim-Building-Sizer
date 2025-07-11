@@ -48,6 +48,7 @@ from hisim.result_path_provider import (
 )
 from hisim.loadtypes import HeatingSystems
 
+
 @dataclasses_json.dataclass_json
 @dataclasses.dataclass
 class BuildingSizerRequest:
@@ -209,6 +210,7 @@ def create_subsequent_building_sizer_request(
 
     return subsequent_building_sizer_request
 
+
 def decide_based_on_hisim_config_which_module_to_choose(hisim_config_path: str) -> str:
     """Read the heating system from config and decide which hisim system setup will be chosen."""
     with open(hisim_config_path, "r", encoding="utf-8") as file:
@@ -222,8 +224,11 @@ def decide_based_on_hisim_config_which_module_to_choose(hisim_config_path: str) 
             raise ValueError(f"Heating system {heating_system} not recognized.")
     return hisim_module
 
+
 def get_results_from_requisite_hisim_configs(
-    requisite_hisim_config_paths: List[str], main_building_sizer_request_directory: str, hisim_simulation_parameters: SimulationParameters
+    requisite_hisim_config_paths: List[str],
+    main_building_sizer_request_directory: str,
+    hisim_simulation_parameters: SimulationParameters,
 ) -> Dict[str, Dict]:
     """
     Collects the results from the HiSim requests sent in the previous iteration.
@@ -255,7 +260,9 @@ def get_results_from_requisite_hisim_configs(
             main_building_sizer_request_directory, "hisim_results"
         )
         # Select hisim module
-        hisim_module = decide_based_on_hisim_config_which_module_to_choose(hisim_config_path=hisim_config_path)
+        hisim_module = decide_based_on_hisim_config_which_module_to_choose(
+            hisim_config_path=hisim_config_path
+        )
         ResultPathProviderSingleton().set_important_result_path_information(
             module_directory=hisim_result_directory,
             model_name=hisim_module,
@@ -326,7 +333,9 @@ def get_results_from_requisite_hisim_configs_slurm(
         # SLURM script to execute
         slurm_script = "/fast/home/k-rieck/HiSim-Building-Sizer/cluster_requests/job_array_hisim_simulation.sh"
         # Select hisim module
-        hisim_module = decide_based_on_hisim_config_which_module_to_choose(hisim_config_path=hisim_config_path)
+        hisim_module = decide_based_on_hisim_config_which_module_to_choose(
+            hisim_config_path=hisim_config_path
+        )
         # Call the SLURM script with subprocess and pass the two parameters
         slurm_result_hisim_simulation = subprocess.run(
             [
@@ -351,10 +360,7 @@ def get_results_from_requisite_hisim_configs_slurm(
         job_id = slurm_result_hisim_simulation.stdout.strip().split()[-1]
         print(f"Submitted SLURM job with ID {job_id}")
         job_ids.append(job_id)
-    # Get the job state from the output
-    # job_state = slurm_result_hisim_simulation.stdout.strip()
-    # print("job state ", job_state)
-    print("job ids", job_ids)
+
     # Wait for all SLURM jobs in job_ids to finish.
     while True:
         all_done = True
@@ -365,11 +371,11 @@ def get_results_from_requisite_hisim_configs_slurm(
                     ["squeue", "-j", str(job_id), "--noheader"],
                     capture_output=True,
                     text=True,
-                    check=True
+                    check=True,
                 )
                 # Get the job state from the output
                 job_state = result.stdout.strip()
-                print("job state while checking status", job_state)
+
             except subprocess.CalledProcessError as e:
                 print(f"Error checking job status for {job_id}: {e}")
                 job_state = None
@@ -386,7 +392,7 @@ def get_results_from_requisite_hisim_configs_slurm(
             time.sleep(30)  # Wait for 1 minute before checking again
 
     # Once the job is finished, check if the result file exists
-    timeout = 600  # Timeout in seconds (adjust as needed)
+    timeout = 120  # Timeout in seconds (adjust as needed)
     start_time = time.time()
     while not result_dict:
         with open(result_dict_path, "r", encoding="utf-8") as result_file:
@@ -465,7 +471,7 @@ def building_sizer_iteration(
         main_building_sizer_request_directory,
         hisim_simulation_parameters,
     )
-    print("result dict length after serialized slurm jobs", len(result_dict))
+    # print("result dict length after serialized slurm jobs", len(result_dict))
     # result_dict = get_results_from_requisite_hisim_configs(
     #     request.requisite_hisim_config_paths,
     #     main_building_sizer_request_directory,

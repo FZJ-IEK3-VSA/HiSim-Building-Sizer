@@ -5,10 +5,13 @@ import os
 import time
 import re
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Union, Optional
 
 import matplotlib.pyplot as plt  # type: ignore
 import pandas as pd
+
+# Add the parent directory to the system path
+sys.path.append("/fast/home/k-rieck/HiSim-Building-Sizer/")
 from building_sizer_execution import building_sizer_algorithm_no_utsp
 from building_sizer_execution.building_sizer_algorithm_no_utsp import (
     BuildingSizerRequest,
@@ -29,7 +32,9 @@ from hisim.simulationparameters import SimulationParameters
 
 
 def plot_ratings_of_each_iteration_as_boxplots(
-    ratings: List[List[float]], main_building_sizer_request_directory: str, request: BuildingSizerRequest
+    ratings: List[List[float]],
+    main_building_sizer_request_directory: str,
+    request: BuildingSizerRequest,
 ) -> None:
     """
     Generate a boxplot for each generation showing the range of ratings
@@ -45,10 +50,17 @@ def plot_ratings_of_each_iteration_as_boxplots(
     _ = ax.boxplot(ratings)  # type: ignore
     # show plot
     plt.show()
-    plt.savefig(os.path.join(main_building_sizer_request_directory, "ratings_per_iteration_boxplots.png"))
+    plt.savefig(
+        os.path.join(
+            main_building_sizer_request_directory, "ratings_per_iteration_boxplots.png"
+        )
+    )
+
 
 def plot_ratings_of_each_energy_system_config_as_scatterplot(
-    dataframe_with_ratings: pd.DataFrame, request: BuildingSizerRequest, main_building_sizer_request_directory: str
+    dataframe_with_ratings: pd.DataFrame,
+    request: BuildingSizerRequest,
+    main_building_sizer_request_directory: str,
 ) -> None:
     """
     Generate scatter plot for all energy system configs and their ratings.
@@ -57,26 +69,39 @@ def plot_ratings_of_each_energy_system_config_as_scatterplot(
     ax = fig.add_subplot(111)
     ax.set_xlabel("Energy system combination")
     # sort according to certain column
-    sorted_df = dataframe_with_ratings.sort_values(by=[str(request.kpi_for_rating.value)])
+    sorted_df = dataframe_with_ratings.sort_values(
+        by=[str(request.kpi_for_rating.value)]
+    )
     # merge config columns
-    sorted_df['energy_system_combination'] = sorted_df['heating_system'] + " + PV " + (sorted_df['share_of_maximum_pv_potential']*100).astype(str) + "%"
+    sorted_df["energy_system_combination"] = (
+        sorted_df["heating_system"]
+        + " + PV "
+        + (sorted_df["share_of_maximum_pv_potential"] * 100).astype(str)
+        + "%"
+    )
 
     ax.set_ylabel(str(request.kpi_for_rating.value))
     # Creating plot
-    plt.scatter(x=sorted_df['energy_system_combination'], y=sorted_df[str(request.kpi_for_rating.value)])  # type: ignore
+    plt.scatter(x=sorted_df["energy_system_combination"], y=sorted_df[str(request.kpi_for_rating.value)])  # type: ignore
     # Rotating X-axis labels
-    plt.xticks(rotation = 45, ha='right')
+    plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
     # show plot
     plt.show()
-    plt.savefig(os.path.join(main_building_sizer_request_directory, "ratings_per_energy_system_scatter.png"))
+    plt.savefig(
+        os.path.join(
+            main_building_sizer_request_directory,
+            "ratings_per_energy_system_scatter.png",
+        )
+    )
+
 
 # TODO: this is already called in building sizer iteration or why is it double?
 def get_hisim_kpis_of_iteration(
     building_sizer_request: BuildingSizerRequest,
     main_building_sizer_request_directory: str,
     hisim_simulation_parameters: SimulationParameters,
-    all_hisim_kpis_list: List[Dict]
+    all_hisim_kpis_list: List[Dict],
 ) -> Dict[str, Dict]:
     """
     Returns the KPIs (results of HiSIM calculation) for one generation of HiSim configurations
@@ -95,6 +120,7 @@ def get_hisim_kpis_of_iteration(
 
     # read through hisim results folder and collect all results instead of running hisim simulation again
     import fnmatch
+
     kpi_values = None
     hisim_config_values = None
     hisim_kpis: Dict = {}
@@ -102,16 +128,20 @@ def get_hisim_kpis_of_iteration(
     for root, dirs, files in os.walk(main_building_sizer_request_directory):
         for filename in files:
 
-            if fnmatch.fnmatch(filename, 'kpi_config_for_building_sizer.json'):  # Match specific file pattern (e.g., *.txt)
+            if fnmatch.fnmatch(
+                filename, "kpi_config_for_building_sizer.json"
+            ):  # Match specific file pattern (e.g., *.txt)
                 file_path = os.path.join(root, filename)
                 # Open and read the file, then append its content to the list
-                with open(file_path, 'r', encoding='utf-8') as file:
-                    kpi_values = json.load(file) 
+                with open(file_path, "r", encoding="utf-8") as file:
+                    kpi_values = json.load(file)
 
-            if kpi_values is not None and fnmatch.fnmatch(filename, 'data_for_scenario_evaluation.json'):  # Match specific file pattern (e.g., *.txt)
+            if kpi_values is not None and fnmatch.fnmatch(
+                filename, "data_for_scenario_evaluation.json"
+            ):  # Match specific file pattern (e.g., *.txt)
                 file_path_1 = os.path.join(root, filename)
                 # Open and read the file, then append its content to the list
-                with open(file_path_1, 'r', encoding='utf-8') as file:
+                with open(file_path_1, "r", encoding="utf-8") as file:
                     hisim_config_values = json.load(file)["myModuleConfig"]
                     hisim_config_values_str = str(hisim_config_values)
                     # make dict of these two
@@ -177,7 +207,10 @@ def return_config_as_dict(hisim_config_str: str) -> Dict:
     return d_config
 
 
-def main(building_sizer_config_filename: str):
+def main(
+    building_sizer_config_file: Union[str, BuildingSizerConfig],
+    building_sizer_result_folder: Optional[str] = None,
+):
     """
     Default function to call the building sizer.
 
@@ -207,18 +240,36 @@ def main(building_sizer_config_filename: str):
 
     # open json config
     my_config: BuildingSizerConfig
-    if isinstance(building_sizer_config_filename, str) and os.path.exists(
-        building_sizer_config_filename.rstrip("\r")
+    if isinstance(building_sizer_config_file, str) and os.path.exists(
+        building_sizer_config_file.rstrip("\r")
     ):
         with open(
-            building_sizer_config_filename.rstrip("\r"), encoding="unicode_escape"
+            building_sizer_config_file.rstrip("\r"), encoding="unicode_escape"
         ) as config_file:
             my_config_dict = json.load(config_file)
             my_config = BuildingSizerConfig.from_dict(my_config_dict)  # type: ignore
+
+        # get datetime and hash value from building_sizer_config_filename
+        bs_config_datetime_string = building_sizer_config_file.split("/")[-2].split(
+            "_"
+        )[-1]
+        bs_config_hash_string = re.findall(
+            r"\-?\d+", building_sizer_config_file.split("_")[-1]
+        )[0]
+
+    elif isinstance(building_sizer_config_file, BuildingSizerConfig):
+        my_config = building_sizer_config_file
+        # create datetime and hash value from building_sizer_config_filename
+        bs_config_datetime_string = datetime.now().strftime("%Y%m%d_%H%M")
+        my_config_dict = my_config.to_dict()
+        config_str = json.dumps(my_config_dict, indent=4)
+        bs_config_hash_string = hash(config_str)
+
     else:
         raise FileNotFoundError(
-            f"The building sizer config filepath does not exist or is not readable: {building_sizer_config_filename}"
+            f"The building sizer config file does not exist or is not readable: {building_sizer_config_file}"
         )
+
     # Get Hisim simulation parameters
     hisim_simulation_parameters = SimulationParameters.from_dict(
         my_config.hisim_simulation_parameters
@@ -227,17 +278,16 @@ def main(building_sizer_config_filename: str):
     initial_building_sizer_request = BuildingSizerRequest.from_dict(
         my_config.initial_building_sizer_request
     )
-    # get hash value from building_sizer_config_filename
-    bs_config_datetime_string = building_sizer_config_filename.split("/")[-2].split(
-        "_"
-    )[-1]
-    bs_config_hash_string = re.findall(
-        r"\-?\d+", building_sizer_config_filename.split("_")[-1]
-    )[0]
+
     # create folder where everything related to this building sizer request is stored
+    if building_sizer_result_folder is None:
+        building_sizer_result_folder = os.path.join(
+            os.path.abspath(os.path.join(os.getcwd(), os.pardir)),
+            "building_sizer_results",
+        )
+
     main_building_sizer_request_directory = os.path.join(
-        os.path.abspath(os.path.join(os.getcwd(), os.pardir)),
-        "building_sizer_results",
+        building_sizer_result_folder,
         f"bs_requests_{bs_config_datetime_string}",
         f"bs_request_{bs_config_hash_string}",
     )
@@ -249,7 +299,11 @@ def main(building_sizer_config_filename: str):
             f"The directory for the initial building sizer request {main_building_sizer_request_directory} already exists. It will be overwritten."
         )
     # save building sizer config file also in main building sizer request directory
-    with open(os.path.join(main_building_sizer_request_directory, f"bs_config.json"), "w", encoding="utf-8") as file:
+    with open(
+        os.path.join(main_building_sizer_request_directory, f"bs_config.json"),
+        "w",
+        encoding="utf-8",
+    ) as file:
         json.dump(my_config_dict, file, ensure_ascii=False, indent=4)
 
     # building_sizer_config_json = initial_building_sizer_request.to_json()  # type: ignore
@@ -292,7 +346,7 @@ def main(building_sizer_config_filename: str):
                 raise TimeoutError(
                     f"Result file '{result_file}' was not created within the timeout period."
                 )
-            print(f"Waiting for '{result_file}' to be created...")
+            # print(f"Waiting for '{result_file}' to be created...")
             time.sleep(10)
 
         # Once the file exists, read it
@@ -300,6 +354,7 @@ def main(building_sizer_config_filename: str):
         with open(result_file, "r", encoding="utf-8",) as file:
             status_json = json.load(file)
             print("File read successfully:", status_json)
+
         building_sizer_result: BuildingSizerResult = BuildingSizerResult.from_dict(status_json)  # type: ignore
 
         # Check if this was the final iteration and the building sizer is finished
@@ -327,7 +382,7 @@ def main(building_sizer_config_filename: str):
                 building_sizer_request,
                 main_building_sizer_request_directory,
                 hisim_simulation_parameters,
-                all_hisim_kpis
+                all_hisim_kpis,
             )
             all_ratings += f"{list(hisim_kpis_of_this_iteration.values())}\n"
             all_hisim_kpis.append(hisim_kpis_of_this_iteration)
@@ -353,12 +408,25 @@ def main(building_sizer_config_filename: str):
     print(f"Finished. Optimization took {datetime.now() - start}.")
     print("len all hisim kpis", len(all_hisim_kpis))
     print("len hisim kpis of this iteration ", len(hisim_kpis_of_this_iteration))
-    plot_ratings_of_each_iteration_as_boxplots(all_ratings_list, main_building_sizer_request_directory, building_sizer_request)
+    plot_ratings_of_each_iteration_as_boxplots(
+        all_ratings_list, main_building_sizer_request_directory, building_sizer_request
+    )
 
-    df_all_ratings = create_table_with_all_energy_system_configs_and_hisim_kpis(all_hisim_kpis, main_building_sizer_request_directory,building_sizer_request)
-    plot_ratings_of_each_energy_system_config_as_scatterplot(dataframe_with_ratings=df_all_ratings, request=building_sizer_request, main_building_sizer_request_directory=main_building_sizer_request_directory)
+    df_all_ratings = create_table_with_all_energy_system_configs_and_hisim_kpis(
+        all_hisim_kpis, main_building_sizer_request_directory, building_sizer_request
+    )
+    plot_ratings_of_each_energy_system_config_as_scatterplot(
+        dataframe_with_ratings=df_all_ratings,
+        request=building_sizer_request,
+        main_building_sizer_request_directory=main_building_sizer_request_directory,
+    )
 
-def create_table_with_all_energy_system_configs_and_hisim_kpis(generations: Dict, main_building_sizer_request_directory: str, request: BuildingSizerRequest) -> pd.DataFrame:
+
+def create_table_with_all_energy_system_configs_and_hisim_kpis(
+    generations: Dict,
+    main_building_sizer_request_directory: str,
+    request: BuildingSizerRequest,
+) -> pd.DataFrame:
     """
     Writes csv containing all kpi values (HiSIM results) of all individuals (HiSim configuration) of each generation (iteration).
 
@@ -375,9 +443,11 @@ def create_table_with_all_energy_system_configs_and_hisim_kpis(generations: Dict
             d_total["iteration"] = iteration
 
             rating_kpi = get_rating(kpi_dict, request)
-            d_only_ratings = dict(d_config, **{f"{request.kpi_for_rating.value}": rating_kpi})
+            d_only_ratings = dict(
+                d_config, **{f"{request.kpi_for_rating.value}": rating_kpi}
+            )
             d_only_ratings["iteration"] = iteration
-            
+
             for name, value in d_total.items():
                 if name not in all_data:
                     all_data[name] = []
@@ -404,4 +474,4 @@ if __name__ == "__main__":
         sys.exit(1)
     BUILDING_SIZER_CONFIG_FILENAME = sys.argv[1]
     print("start building sizer with config " + BUILDING_SIZER_CONFIG_FILENAME)
-    main(building_sizer_config_filename=BUILDING_SIZER_CONFIG_FILENAME)
+    main(building_sizer_config_file=BUILDING_SIZER_CONFIG_FILENAME)
