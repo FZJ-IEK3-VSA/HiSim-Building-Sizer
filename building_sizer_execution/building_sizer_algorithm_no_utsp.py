@@ -220,8 +220,16 @@ def decide_based_on_hisim_config_which_module_to_choose(hisim_config_path: str) 
             hisim_module = "household_heatpump_building_sizer"
         elif heating_system == HeatingSystems.GAS_HEATING:
             hisim_module = "household_gas_building_sizer"
+        elif heating_system == HeatingSystems.DISTRICT_HEATING:
+            hisim_module = "household_district_heating_building_sizer"
+        elif heating_system == HeatingSystems.OIL_HEATING:
+            hisim_module = "household_oil_building_sizer"
+        elif heating_system == HeatingSystems.PELLET_HEATING:
+            hisim_module = "household_pellets_building_sizer"
+        elif heating_system == HeatingSystems.WOOD_CHIP_HEATING:
+            hisim_module = "household_wood_chips_building_sizer"
         else:
-            raise ValueError(f"Heating system {heating_system} not recognized.")
+            raise ValueError(f"Heating system {heating_system} not recognized or has no corresponding hisim system setup yet.")
     return hisim_module
 
 
