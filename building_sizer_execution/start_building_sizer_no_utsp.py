@@ -1,4 +1,5 @@
 """Sends a building sizer request to the UTSP and waits until the calculation is finished."""
+
 import sys
 import json
 import os
@@ -9,6 +10,7 @@ from typing import Dict, List, Union, Optional
 
 import matplotlib.pyplot as plt  # type: ignore
 import pandas as pd
+import fnmatch
 
 # Add the parent directory to the system path
 sys.path.append("/fast/home/k-rieck/HiSim-Building-Sizer/")
@@ -68,21 +70,21 @@ def plot_ratings_of_each_energy_system_config_as_scatterplot(
     fig = plt.figure(figsize=(10, 7))
     ax = fig.add_subplot(111)
     ax.set_xlabel("Energy system combination")
-    # sort according to certain column
-    sorted_df = dataframe_with_ratings.sort_values(
-        by=[str(request.kpi_for_rating.value)]
-    )
+    # # sort according to certain column
+    # sorted_df = dataframe_with_ratings.sort_values(
+    #     by=[str(request.kpi_for_rating.value)]
+    # )
     # merge config columns
-    sorted_df["energy_system_combination"] = (
-        sorted_df["heating_system"]
+    dataframe_with_ratings["energy_system_combination"] = (
+        dataframe_with_ratings["heating_system"]
         + " + PV "
-        + (sorted_df["share_of_maximum_pv_potential"] * 100).astype(str)
+        + (dataframe_with_ratings["share_of_maximum_pv_potential"] * 100).astype(str)
         + "%"
     )
 
     ax.set_ylabel(str(request.kpi_for_rating.value))
     # Creating plot
-    plt.scatter(x=sorted_df["energy_system_combination"], y=sorted_df[str(request.kpi_for_rating.value)])  # type: ignore
+    plt.scatter(x=dataframe_with_ratings["energy_system_combination"], y=dataframe_with_ratings[str(request.kpi_for_rating.value)])  # type: ignore
     # Rotating X-axis labels
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
@@ -119,7 +121,6 @@ def get_hisim_kpis_of_iteration(
     # )
 
     # read through hisim results folder and collect all results instead of running hisim simulation again
-    import fnmatch
 
     kpi_values = None
     hisim_config_values = None
@@ -129,7 +130,7 @@ def get_hisim_kpis_of_iteration(
         for filename in files:
 
             if fnmatch.fnmatch(
-                filename, "kpi_config_for_building_sizer.json"
+                filename, "*_kpi_config_for_building_sizer.json"
             ):  # Match specific file pattern (e.g., *.txt)
                 file_path = os.path.join(root, filename)
                 # Open and read the file, then append its content to the list
@@ -168,7 +169,7 @@ def get_rating(kpi_dict: Dict, request: BuildingSizerRequest) -> float:
     :rtype: float
     """
 
-    return KPIConfig.from_dict(kpi_dict).get_kpi_for_rating(chosen_kpi=request.kpi_for_rating)  # type: ignore
+    return round(KPIConfig.from_dict(kpi_dict).get_kpi_for_rating(chosen_kpi=request.kpi_for_rating), 2)  # type: ignore
 
 
 def get_ratings(kpis_dicts: List[Dict], request: BuildingSizerRequest) -> List[float]:
@@ -351,7 +352,11 @@ def main(
 
         # Once the file exists, read it
         # Get the content of the result file created by the Building Sizer
-        with open(result_file, "r", encoding="utf-8",) as file:
+        with open(
+            result_file,
+            "r",
+            encoding="utf-8",
+        ) as file:
             status_json = json.load(file)
             print("File read successfully:", status_json)
 
@@ -384,6 +389,7 @@ def main(
                 hisim_simulation_parameters,
                 all_hisim_kpis,
             )
+
             all_ratings += f"{list(hisim_kpis_of_this_iteration.values())}\n"
             all_hisim_kpis.append(hisim_kpis_of_this_iteration)
             all_ratings_list.append(
@@ -405,7 +411,6 @@ def main(
                 )
                 print("---")
 
-    print(f"Finished. Optimization took {datetime.now() - start}.")
     print("len all hisim kpis", len(all_hisim_kpis))
     print("len hisim kpis of this iteration ", len(hisim_kpis_of_this_iteration))
     plot_ratings_of_each_iteration_as_boxplots(
@@ -420,6 +425,7 @@ def main(
         request=building_sizer_request,
         main_building_sizer_request_directory=main_building_sizer_request_directory,
     )
+    print(f"Finished. Optimization took {datetime.now() - start}.")
 
 
 def create_table_with_all_energy_system_configs_and_hisim_kpis(
@@ -460,12 +466,17 @@ def create_table_with_all_energy_system_configs_and_hisim_kpis(
 
     df = pd.DataFrame.from_dict(all_data)
     df_all_ratings = pd.DataFrame.from_dict(only_ratings)
-    df.to_csv(
+    # sort according to kpi for rating
+    sorted_df = df.sort_values(by=[str(request.kpi_for_rating.value)])
+    sorted_df_all_ratings = df_all_ratings.sort_values(
+        by=[str(request.kpi_for_rating.value)]
+    )
+    sorted_df.to_csv(
         os.path.join(
             main_building_sizer_request_directory, "building_sizer_results.csv"
         )
     )
-    return df_all_ratings
+    return sorted_df_all_ratings
 
 
 if __name__ == "__main__":

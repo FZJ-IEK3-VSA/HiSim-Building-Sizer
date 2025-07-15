@@ -11,6 +11,7 @@ for the next Building Sizer iteration as a result to the UTSP (and thereby also 
 
 import dataclasses
 import time
+import pandas as pd
 import subprocess
 from typing import Any, Dict, List, Optional, Tuple
 import json
@@ -47,6 +48,11 @@ from hisim.result_path_provider import (
     SortingOptionEnum,
 )
 from hisim.loadtypes import HeatingSystems
+
+sys.path.append(
+    "/fast/home/k-rieck/jobs_hisim/cluster-hisim-paper/job_array_for_hisim_mass_simus/cluster_job_management"
+)
+from job_management_functions import make_parallel_slurm_requests
 
 
 @dataclasses_json.dataclass_json
@@ -229,7 +235,9 @@ def decide_based_on_hisim_config_which_module_to_choose(hisim_config_path: str) 
         elif heating_system == HeatingSystems.WOOD_CHIP_HEATING:
             hisim_module = "household_wood_chips_building_sizer"
         else:
-            raise ValueError(f"Heating system {heating_system} not recognized or has no corresponding hisim system setup yet.")
+            raise ValueError(
+                f"Heating system {heating_system} not recognized or has no corresponding hisim system setup yet."
+            )
     return hisim_module
 
 
@@ -275,7 +283,9 @@ def get_results_from_requisite_hisim_configs(
             module_directory=hisim_result_directory,
             model_name=hisim_module,
             further_result_folder_description=os.path.join(
-                *[further_result_folder_description,]
+                *[
+                    further_result_folder_description,
+                ]
             ),
             variant_name="_",
             scenario_hash_string=scenario_hash_string,
@@ -325,97 +335,65 @@ def get_results_from_requisite_hisim_configs_slurm(
     :rtype: Dict[str, ResultDelivery]
     """
     # run HiSim for each config and get kpis and store in dictionary
-    # Step 1: Check if result_dict_path exists, if not create an empty dict in it
+    # Step 1: Prepare result_dict_path
     result_dict_path = os.path.join(
         main_building_sizer_request_directory, "result_dict.json"
     )
-    result_dict: Dict = {}
     if not os.path.exists(result_dict_path):
         with open(result_dict_path, "w") as file:
-            json.dump(result_dict, file)
-    job_ids = []
-    for index, hisim_config_path in enumerate(requisite_hisim_config_paths):
-        # Get result by calling building_sizer_algorithm_no_utsp on cluster
-        # Serialize the `building_sizer_request` object to a JSON string
-        json_hisim_params = json.dumps(hisim_simulation_parameters.to_dict())
-        # SLURM script to execute
-        slurm_script = "/fast/home/k-rieck/HiSim-Building-Sizer/cluster_requests/job_array_hisim_simulation.sh"
-        # Select hisim module
+            json.dump({}, file)
+
+    # Step 2: Create a job array CSV
+    job_array_file_path = os.path.join(
+        main_building_sizer_request_directory, "job_array.csv"
+    )
+    json_hisim_params = json.dumps(hisim_simulation_parameters.to_dict())
+
+    job_array_data = []
+    for i, hisim_config_path in enumerate(requisite_hisim_config_paths):
         hisim_module = decide_based_on_hisim_config_which_module_to_choose(
-            hisim_config_path=hisim_config_path
+            hisim_config_path
         )
-        # Call the SLURM script with subprocess and pass the two parameters
-        slurm_result_hisim_simulation = subprocess.run(
-            [
-                "sbatch",
-                slurm_script,
-                hisim_config_path,
-                hisim_module,
-                main_building_sizer_request_directory,
-                result_dict_path,
-                json_hisim_params,
-            ],
-            check=True,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+        result_path = main_building_sizer_request_directory
+        job_array_data.append(
+            {
+                "ArrayTaskID": i,
+                "ConfigPath": hisim_config_path,
+                "ResultPath": result_path,
+                "HiSimModule": hisim_module,
+                "HiSimSimuParamsJSON": json_hisim_params,
+                "HiSimResultDictPath": result_dict_path,
+            }
         )
 
-        # Extract the job ID from the output of `sbatch`
-        # if stdout is none check if any errors occured
-        if slurm_result_hisim_simulation.stdout is None:
-            print(f"Error: {slurm_result_hisim_simulation.stderr}")
-        job_id = slurm_result_hisim_simulation.stdout.strip().split()[-1]
-        print(f"Submitted SLURM job with ID {job_id}")
-        job_ids.append(job_id)
+    # Write CSV
+    job_array_df = pd.DataFrame(job_array_data)
+    job_array_df.to_csv(job_array_file_path, index=False)
 
-    # Wait for all SLURM jobs in job_ids to finish.
-    while True:
-        all_done = True
-        for job_id in job_ids:
-            # Check the status of a SLURM job using sacct.#
-            try:
-                result = subprocess.run(
-                    ["squeue", "-j", str(job_id), "--noheader"],
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
-                # Get the job state from the output
-                job_state = result.stdout.strip()
+    # Step 3: Submit and monitor jobs
+    slurm_script = "/fast/home/k-rieck/HiSim-Building-Sizer/cluster_requests/job_array_hisim_simulation.sh"
+    make_parallel_slurm_requests(
+        job_array_file_path=job_array_file_path,
+        slurm_script=slurm_script,
+        global_timeout_minutes=120,
+        job_timeout_minutes=30,
+        sleep_time_in_seconds=30,
+    )
 
-            except subprocess.CalledProcessError as e:
-                print(f"Error checking job status for {job_id}: {e}")
-                job_state = None
-
-            if job_state not in ["COMPLETED", "FAILED", "CANCELLED", ""]:
-                all_done = False
-                break
-
-        if all_done:
-            print("All jobs are done.")
-            break
-        else:
-            print("Waiting for jobs to finish...")
-            time.sleep(30)  # Wait for 1 minute before checking again
-
-    # Once the job is finished, check if the result file exists
-    timeout = 120  # Timeout in seconds (adjust as needed)
+    # Step 4: Load results
+    timeout = 120
     start_time = time.time()
-    while not result_dict:
+    while True:
         with open(result_dict_path, "r", encoding="utf-8") as result_file:
             result_dict = json.load(result_file)
+        if result_dict:
+            return result_dict
         if time.time() - start_time > timeout:
             raise TimeoutError(
-                f"Result dict {result_dict_path} was not filled within the timeout period."
+                f"Result dict {result_dict_path} was not filled within the timeout."
             )
-        print(f"Waiting for result dict {result_dict_path} to be filled with values...")
+        print(f"Waiting for result dict {result_dict_path} to be filled...")
         time.sleep(10)
-
-    if result_dict:
-        return result_dict
-    else:
-        raise ValueError("Result dict is empty ", result_dict)
 
 
 def trigger_next_iteration(
@@ -539,8 +517,10 @@ def building_sizer_iteration(
     # convert individuals back to HiSim SystemConfigs
     hisim_configs: List[EnergySystemConfig] = []
     for individual in new_individuals:
-        system_config_instance = individual_encoding_no_utsp.create_config_from_individual(
-            individual, request.options
+        system_config_instance = (
+            individual_encoding_no_utsp.create_config_from_individual(
+                individual, request.options
+            )
         )
         hisim_configs.append(system_config_instance)
 
@@ -573,8 +553,10 @@ def main_without_utsp(
         )
     else:
         # First iteration; initialize algorithm and specify initial hisim requests
-        initial_hisim_energy_system_configs = individual_encoding_no_utsp.create_random_system_configs(
-            request.population_size, request.options
+        initial_hisim_energy_system_configs = (
+            individual_encoding_no_utsp.create_random_system_configs(
+                request.population_size, request.options
+            )
         )
 
         next_building_sizer_request = trigger_next_iteration(

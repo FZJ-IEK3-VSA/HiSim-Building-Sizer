@@ -1,4 +1,5 @@
 """Module to prepare building sizer configs."""
+
 import sys
 import os
 import json

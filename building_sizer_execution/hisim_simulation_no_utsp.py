@@ -1,8 +1,10 @@
 """Run HiSim simulation."""
+
 # Add the parent directory to the system path
 import sys
 import re
 import os
+from pathlib import Path
 import json
 from typing import Dict, Optional
 
@@ -38,9 +40,13 @@ def run_hisim_simulation_and_collect_kpis(
     Collects the results from the HiSim request.
     """
     # get simulation paramters
-    my_simulation_parameters = SimulationParameters.from_json(
-        my_simulation_parameters_json_string
-    )
+    if my_simulation_parameters_json_string != "":
+        my_simulation_parameters = SimulationParameters.from_json(
+            my_simulation_parameters_json_string
+        )
+    else:
+        raise ValueError("Simulation parameters JSON string is empty.")
+
     # run HiSim for each config and get kpis and store in dictionary
     household_module = household_module
     path_to_module = (
@@ -61,7 +67,9 @@ def run_hisim_simulation_and_collect_kpis(
         module_directory=hisim_result_directory,
         model_name=household_module,
         further_result_folder_description=os.path.join(
-            *[further_result_folder_description,]
+            *[
+                further_result_folder_description,
+            ]
         ),
         variant_name="_",
         scenario_hash_string=scenario_hash_string,
@@ -81,14 +89,23 @@ def run_hisim_simulation_and_collect_kpis(
     )
 
     # get results for each simulation
-    kpi_json = "kpi_config_for_building_sizer.json"
-    with open(
-        os.path.join(my_simulation_parameters.result_directory, kpi_json),
-        "r",
-        encoding="utf-8",
-    ) as result_file:
-        kpis_building_sizer = json.load(result_file)
-        print("KPIs building sizer", kpis_building_sizer)
+    search_dir = Path(my_simulation_parameters.result_directory)
+    # Search for files matching the pattern (* is a wildcard for any building object (check HiSim postprocessing_main.py))
+    matching_files = list(search_dir.glob("*_kpi_config_for_building_sizer.json"))
+
+    if not matching_files:
+        raise FileNotFoundError(
+            "No matching KPI config file found. Something went wrong."
+        )
+    elif len(matching_files) > 1:
+        raise ValueError(
+            f"Too many matching files found: {matching_files}. This happens when HiSim simulates not one house but several house objects."
+        )
+    else:
+        file_path = matching_files[0]
+        with open(file_path, "r") as f:
+            kpis_building_sizer = json.load(f)
+
     # add configs and respective kpis to dictionary
     current_result_dict = {hisim_config_path: kpis_building_sizer}
 
@@ -110,10 +127,10 @@ if __name__ == "__main__":
         log.information("HiSim simulation script needs four arguments.")
         sys.exit(1)
     HISIM_CONFIG_PATH = sys.argv[1]
-    HOUSEHOLD_MODULE = sys.argv[2]
-    MAIN_REQUEST_DIRECTORY = sys.argv[3]
-    RESULT_DICT_PATH = sys.argv[4]
-    SIMULATION_PARAMETERS_JSON_STRING = sys.argv[5]
+    MAIN_REQUEST_DIRECTORY = sys.argv[2]
+    HOUSEHOLD_MODULE = sys.argv[3]
+    SIMULATION_PARAMETERS_JSON_STRING = sys.argv[4]
+    RESULT_DICT_PATH = sys.argv[5]
 
     print(
         "calling "

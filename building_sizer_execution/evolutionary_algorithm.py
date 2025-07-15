@@ -1,4 +1,4 @@
-""" 
+"""
 Evolutionary algorithms evaluate the fitness of various individuals of a population - and inspired by biology - combine them randomly to a new generation.
 The fitter the individuals the better the chance to propagate.
 In this context an individual would be a specified building configurations for HiSIM calls
@@ -24,7 +24,7 @@ def unique(
     :type rated_individuals: List[individual_encoding.RatedIndividual]
     :param population_size: amount of individuals to be selected
     :tpye population_size: int
-    :return: shortened list of individuals (HiSIM configurations) and KPIs (HiSIM results) 
+    :return: shortened list of individuals (HiSIM configurations) and KPIs (HiSIM results)
     :rtype: List[individual_encoding.RatedIndividual]
 
     """
@@ -75,16 +75,16 @@ def complete_population(
 ) -> List[individual_encoding.Individual]:
     """
     Adds random individuals to population, if the population size is too small.
-    
+
     :param original_parents: list of individuals of original population
     :type original_parents: List[individual_encoding.Individual]
     :param population_size: number of individuals the population should finally contain
     :type population_size: int
     :param options: contains all available options for the sizing of each component.
     :type options: individual_encoding.SizingOptions:
-    
+
     :return: list of individuals of the completed population
-    :rtype: completed_population: List[individual_encoding.Individual]        
+    :rtype: completed_population: List[individual_encoding.Individual]
     """
     len_parents = len(original_parents)
     for _ in range(population_size - len_parents):

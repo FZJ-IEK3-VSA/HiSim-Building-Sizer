@@ -1,4 +1,4 @@
-""" For calling a model with profiler and creating a log file. """
+"""For calling a model with profiler and creating a log file."""
 
 # clean
 import cProfile
