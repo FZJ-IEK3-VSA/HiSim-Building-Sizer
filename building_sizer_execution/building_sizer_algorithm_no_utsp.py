@@ -377,7 +377,7 @@ def get_results_from_requisite_hisim_configs_slurm(
         slurm_script=slurm_script,
         global_timeout_minutes=120,
         job_timeout_minutes=30,
-        sleep_time_in_seconds=30,
+        sleep_time_in_seconds=60,
     )
 
     # Step 4: Load results

@@ -32,6 +32,10 @@ from hisim.building_sizer_utils.interface_configs.kpi_config import (
 )
 from hisim.simulationparameters import SimulationParameters
 
+sys.path.append(
+    "/fast/home/k-rieck/jobs_hisim/cluster-hisim-paper/job_array_for_hisim_mass_simus/cluster_job_management"
+)
+from job_management_functions import make_finish_flag_for_successful_executions
 
 def plot_ratings_of_each_iteration_as_boxplots(
     ratings: List[List[float]],
@@ -70,10 +74,7 @@ def plot_ratings_of_each_energy_system_config_as_scatterplot(
     fig = plt.figure(figsize=(10, 7))
     ax = fig.add_subplot(111)
     ax.set_xlabel("Energy system combination")
-    # # sort according to certain column
-    # sorted_df = dataframe_with_ratings.sort_values(
-    #     by=[str(request.kpi_for_rating.value)]
-    # )
+
     # merge config columns
     dataframe_with_ratings["energy_system_combination"] = (
         dataframe_with_ratings["heating_system"]
@@ -426,6 +427,8 @@ def main(
         main_building_sizer_request_directory=main_building_sizer_request_directory,
     )
     print(f"Finished. Optimization took {datetime.now() - start}.")
+    make_finish_flag_for_successful_executions(
+        result_directory=main_building_sizer_request_directory)
 
 
 def create_table_with_all_energy_system_configs_and_hisim_kpis(
@@ -457,21 +460,24 @@ def create_table_with_all_energy_system_configs_and_hisim_kpis(
             for name, value in d_total.items():
                 if name not in all_data:
                     all_data[name] = []
+                if isinstance(value, float):
+                    value = round(value, 2)
                 all_data[name].append(value)
 
             for name, value in d_only_ratings.items():
                 if name not in only_ratings:
                     only_ratings[name] = []
+                if isinstance(value, float):
+                    value = round(value, 2)
                 only_ratings[name].append(value)
 
     df = pd.DataFrame.from_dict(all_data)
     df_all_ratings = pd.DataFrame.from_dict(only_ratings)
     # sort according to kpi for rating
-    sorted_df = df.sort_values(by=[str(request.kpi_for_rating.value)])
     sorted_df_all_ratings = df_all_ratings.sort_values(
         by=[str(request.kpi_for_rating.value)]
     )
-    sorted_df.to_csv(
+    df.to_csv(
         os.path.join(
             main_building_sizer_request_directory, "building_sizer_results.csv"
         )
