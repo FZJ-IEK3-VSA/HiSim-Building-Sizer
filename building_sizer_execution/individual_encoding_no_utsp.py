@@ -39,11 +39,6 @@ class SizingOptions:
     #: list of bools indicating if battery and energy management system (EMS) are included
     use_battery_and_ems: List[bool] = (field(default_factory=lambda: [True, False]),)
 
-    # these lists define the layout of the individual vectors
-    #: list of technologies (boolean attributes) considered in the optimization
-    # bool_attributes: List[str] = field(
-    #     default_factory=lambda: ["pv_included", "battery_included"]
-    # )
     #: list of technologies with different sizing options (discrete attributes) used within the optimization
     discrete_attributes: List[str] = field(
         default_factory=lambda: [
