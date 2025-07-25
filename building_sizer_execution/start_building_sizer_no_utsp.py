@@ -4,9 +4,10 @@ import sys
 import json
 import os
 import time
+import numpy as np
 import re
 from datetime import datetime
-from typing import Dict, List, Union, Optional
+from typing import Dict, List, Union, Optional, Tuple, Any
 
 import matplotlib.pyplot as plt  # type: ignore
 import pandas as pd
@@ -37,6 +38,7 @@ sys.path.append(
 )
 from job_management_functions import make_finish_flag_for_successful_executions
 
+
 def plot_ratings_of_each_iteration_as_boxplots(
     ratings: List[List[float]],
     main_building_sizer_request_directory: str,
@@ -63,6 +65,49 @@ def plot_ratings_of_each_iteration_as_boxplots(
     )
 
 
+def add_energy_system_labels(df: pd.DataFrame, keys: list[str]) -> pd.DataFrame:
+    """Add a column 'energy_system_label' to the DataFrame based on specified keys."""
+
+    def make_label(row):
+        """Make label for one row."""
+        label_parts = []
+        for key in keys:
+            value = row[key]
+
+            if pd.isna(value):
+                part = f"{key}=NaN"
+
+            elif key == "share_of_maximum_pv_potential":
+                try:
+                    part = f"PV {round(float(value) * 100)}%"
+                except Exception as e:
+                    raise ValueError(
+                        f"Invalid value for {key}: {value} ({type(value)}): {e}"
+                    )
+
+            elif key == "use_battery_and_ems":
+                try:
+                    value = bool(value)
+                    part = "WithBatteryAndEMS" if value else "NoBatteryAndEMS"
+                except Exception as e:
+                    raise ValueError(
+                        f"Invalid boolean for {key}: {value} ({type(value)}): {e}"
+                    )
+
+            elif isinstance(value, (str, float, int, np.integer, np.floating)):
+                part = str(value)
+
+            else:
+                raise ValueError(f"Unexpected value for {key}: {value} ({type(value)})")
+
+            label_parts.append(part)
+
+        return " + ".join(label_parts)
+
+    df["energy_system_combination"] = df.apply(make_label, axis=1)
+    return df
+
+
 def plot_ratings_of_each_energy_system_config_as_scatterplot(
     dataframe_with_ratings: pd.DataFrame,
     request: BuildingSizerRequest,
@@ -73,21 +118,14 @@ def plot_ratings_of_each_energy_system_config_as_scatterplot(
     """
     fig = plt.figure(figsize=(10, 7))
     ax = fig.add_subplot(111)
+    # set labels
     ax.set_xlabel("Energy system combination")
-
-    # merge config columns
-    dataframe_with_ratings["energy_system_combination"] = (
-        dataframe_with_ratings["heating_system"]
-        + " + PV "
-        + (dataframe_with_ratings["share_of_maximum_pv_potential"] * 100).astype(str)
-        + "%"
-    )
-
     ax.set_ylabel(str(request.kpi_for_rating.value))
+    print("DEBUG", dataframe_with_ratings["energy_system_combination"])
     # Creating plot
     plt.scatter(x=dataframe_with_ratings["energy_system_combination"], y=dataframe_with_ratings[str(request.kpi_for_rating.value)])  # type: ignore
     # Rotating X-axis labels
-    plt.xticks(rotation=45, ha="right")
+    plt.xticks(rotation=45, ha="right", fontsize=6)
     plt.tight_layout()
     # show plot
     plt.show()
@@ -101,10 +139,7 @@ def plot_ratings_of_each_energy_system_config_as_scatterplot(
 
 # TODO: this is already called in building sizer iteration or why is it double?
 def get_hisim_kpis_of_iteration(
-    building_sizer_request: BuildingSizerRequest,
     main_building_sizer_request_directory: str,
-    hisim_simulation_parameters: SimulationParameters,
-    all_hisim_kpis_list: List[Dict],
 ) -> Dict[str, Dict]:
     """
     Returns the KPIs (results of HiSIM calculation) for one generation of HiSim configurations
@@ -114,15 +149,7 @@ def get_hisim_kpis_of_iteration(
     :return: a dict mapping each HiSim configuration to its KPIs
     :rtype: Dict[float]
     """
-    # print("RUN HISIM SIMU AGAIN AND GET HISIM KPIS OF THIS ITERATION FOR RATING.")
-    # hisim_kpis = building_sizer_algorithm_no_utsp.get_results_from_requisite_hisim_configs_slurm(
-    #     requisite_hisim_config_paths=building_sizer_request.requisite_hisim_config_paths,
-    #     main_building_sizer_request_directory=main_building_sizer_request_directory,
-    #     hisim_simulation_parameters=hisim_simulation_parameters,
-    # )
-
     # read through hisim results folder and collect all results instead of running hisim simulation again
-
     kpi_values = None
     hisim_config_values = None
     hisim_kpis: Dict = {}
@@ -149,14 +176,6 @@ def get_hisim_kpis_of_iteration(
                     # make dict of these two
                     dicti = {hisim_config_values_str: kpi_values}
                     hisim_kpis.update(dicti)
-                    # # avoid duplicated results
-                    # if all_hisim_kpis_list != []:
-                    #     for previous_hisim_kpi_dict in all_hisim_kpis_list:
-                    #         if hisim_config_values_str not in previous_hisim_kpi_dict.keys():
-                    #             print("new hisim results are appended to list. ")
-                    #             hisim_kpis.update(dicti)
-                    #         else:
-                    #             print("hisim results are not appended because they already exist. ")
 
     return hisim_kpis
 
@@ -196,17 +215,117 @@ def return_config_as_dict(hisim_config_str: str) -> Dict:
     """
     # get dict from str
     modular_hh_config_dict = eval(hisim_config_str)
-    # with open(hisim_config_path, "r", encoding="utf-8") as json_file:
-    #     modular_hh_config = json.load(json_file)
     sys_config = modular_hh_config_dict["energy_system_config_"]
-    keys = [
-        "heating_system",
-        "share_of_maximum_pv_potential",
-    ]
-    minimal = {k: sys_config[k] for k in keys}
+
+    minimal = {k: sys_config[k] for k in sys_config.keys()}
     hisim_config_json = json.dumps(minimal)
     d_config = json.loads(hisim_config_json)
     return d_config
+
+
+def load_config_and_meta(
+    building_sizer_config_file: Union[str, BuildingSizerConfig],
+) -> Tuple[BuildingSizerConfig, str, str, dict]:
+    """Load config and meta data."""
+    if isinstance(building_sizer_config_file, str) and os.path.exists(
+        building_sizer_config_file.rstrip("\r")
+    ):
+        with open(
+            building_sizer_config_file.rstrip("\r"), encoding="unicode_escape"
+        ) as config_file:
+            my_config_dict = json.load(config_file)
+            my_config = BuildingSizerConfig.from_dict(my_config_dict)  # type: ignore
+
+        # get datetime and hash value from building_sizer_config_filename
+        bs_config_datetime_string = building_sizer_config_file.split("/")[-2].split(
+            "_"
+        )[-1]
+        bs_config_hash_string = re.findall(
+            r"\-?\d+", building_sizer_config_file.split("_")[-1]
+        )[0]
+
+    elif isinstance(building_sizer_config_file, BuildingSizerConfig):
+        my_config = building_sizer_config_file
+        # create datetime and hash value from building_sizer_config_filename
+        bs_config_datetime_string = datetime.now().strftime("%Y%m%d_%H%M")
+        my_config_dict = my_config.to_dict()
+        config_str = json.dumps(my_config_dict, indent=4)
+        bs_config_hash_string = hash(config_str)
+
+    else:
+        raise FileNotFoundError(
+            f"The building sizer config file does not exist or is not readable: {building_sizer_config_file}"
+        )
+    return my_config, bs_config_datetime_string, bs_config_hash_string, my_config_dict
+
+
+def prepare_output_dir(
+    base_dir: str, datetime_str: str, hash_str: str, config_dict: dict
+) -> str:
+    """Prepare output dir."""
+    request_dir = os.path.join(
+        base_dir, f"bs_requests_{datetime_str}", f"bs_request_{hash_str}"
+    )
+    os.makedirs(request_dir, exist_ok=True)
+    with open(os.path.join(request_dir, "bs_config.json"), "w", encoding="utf-8") as f:
+        json.dump(config_dict, f, ensure_ascii=False, indent=4)
+    return request_dir
+
+
+def wait_for_result(result_file: str, timeout: int = 600):
+    """Wait for result."""
+    start_time = time.time()
+    while not os.path.exists(result_file):
+        if time.time() - start_time > timeout:
+            raise TimeoutError(f"Result file '{result_file}' not created in time.")
+        time.sleep(10)
+
+
+def get_result_from_json(result_file: str) -> BuildingSizerResult:
+    """Get result from json."""
+    with open(result_file, "r", encoding="utf-8") as file:
+        status_json = json.load(file)
+
+    building_sizer_result: BuildingSizerResult = BuildingSizerResult.from_dict(
+        status_json
+    )
+    return building_sizer_result
+
+
+def run_one_iteration(
+    request,
+    output_dir,
+    sim_params,
+    result_file,
+    all_kpis,
+    rating_lists,
+    iteration_counter: int,
+):
+    """Run one iteration."""
+    print(f"--- RUNNING ITERATION NO. {iteration_counter}---", "\n")
+    building_sizer_algorithm_no_utsp.main_without_utsp(
+        request=request,
+        main_building_sizer_request_directory=output_dir,
+        hisim_simulation_parameters=sim_params,
+    )
+    wait_for_result(result_file)
+    result = get_result_from_json(result_file)
+    kpis = get_hisim_kpis_of_iteration(output_dir)
+    if kpis:
+        all_kpis.append(kpis)
+        rating_lists.append(get_ratings(kpis.values(), request))
+        for config_str, kpi in kpis.items():
+            print(
+                "Config:",
+                return_config_as_dict(config_str),
+                "→",
+                request.kpi_for_rating.value,
+                "=",
+                get_rating(kpi, request),
+            )
+            print("---")
+    iteration_counter += 1
+    return all_kpis, rating_lists, result, iteration_counter
 
 
 def main(
@@ -239,38 +358,13 @@ def main(
     :archetype_config_: builing parameters of HiSIM (independet of system config, climate, house type, etc. need to be defined)
     :tpye archetype_config_: archetype_config.ArcheTypeConfig
     """
+    start = datetime.now()
+    iteration_counter = 0
 
     # open json config
-    my_config: BuildingSizerConfig
-    if isinstance(building_sizer_config_file, str) and os.path.exists(
-        building_sizer_config_file.rstrip("\r")
-    ):
-        with open(
-            building_sizer_config_file.rstrip("\r"), encoding="unicode_escape"
-        ) as config_file:
-            my_config_dict = json.load(config_file)
-            my_config = BuildingSizerConfig.from_dict(my_config_dict)  # type: ignore
-
-        # get datetime and hash value from building_sizer_config_filename
-        bs_config_datetime_string = building_sizer_config_file.split("/")[-2].split(
-            "_"
-        )[-1]
-        bs_config_hash_string = re.findall(
-            r"\-?\d+", building_sizer_config_file.split("_")[-1]
-        )[0]
-
-    elif isinstance(building_sizer_config_file, BuildingSizerConfig):
-        my_config = building_sizer_config_file
-        # create datetime and hash value from building_sizer_config_filename
-        bs_config_datetime_string = datetime.now().strftime("%Y%m%d_%H%M")
-        my_config_dict = my_config.to_dict()
-        config_str = json.dumps(my_config_dict, indent=4)
-        bs_config_hash_string = hash(config_str)
-
-    else:
-        raise FileNotFoundError(
-            f"The building sizer config file does not exist or is not readable: {building_sizer_config_file}"
-        )
+    my_config, bs_config_datetime_string, bs_config_hash_string, my_config_dict = (
+        load_config_and_meta(building_sizer_config_file)
+    )
 
     # Get Hisim simulation parameters
     hisim_simulation_parameters = SimulationParameters.from_dict(
@@ -287,148 +381,61 @@ def main(
             os.path.abspath(os.path.join(os.getcwd(), os.pardir)),
             "building_sizer_results",
         )
-
-    main_building_sizer_request_directory = os.path.join(
-        building_sizer_result_folder,
-        f"bs_requests_{bs_config_datetime_string}",
-        f"bs_request_{bs_config_hash_string}",
+    main_building_sizer_request_directory = prepare_output_dir(
+        base_dir=building_sizer_result_folder,
+        datetime_str=bs_config_datetime_string,
+        hash_str=bs_config_hash_string,
+        config_dict=my_config_dict,
+    )
+    result_path = os.path.join(
+        main_building_sizer_request_directory, "results", "status.json"
+    )
+    previous_hashes = {initial_building_sizer_request.get_hash()}
+    iterations, all_kpis, rating_lists = [], [], []
+    # === First iteration (always run) for initialization ===
+    print("\n--- INITIALIZATION ITERATION ---")
+    all_kpis, rating_lists, result_obj, iteration_counter = run_one_iteration(
+        initial_building_sizer_request,
+        main_building_sizer_request_directory,
+        hisim_simulation_parameters,
+        result_path,
+        all_kpis,
+        rating_lists,
+        iteration_counter,
     )
 
-    if not os.path.isdir(main_building_sizer_request_directory):
-        os.makedirs(main_building_sizer_request_directory)
-    else:
-        print(
-            f"The directory for the initial building sizer request {main_building_sizer_request_directory} already exists. It will be overwritten."
-        )
-    # save building sizer config file also in main building sizer request directory
-    with open(
-        os.path.join(main_building_sizer_request_directory, f"bs_config.json"),
-        "w",
-        encoding="utf-8",
-    ) as file:
-        json.dump(my_config_dict, file, ensure_ascii=False, indent=4)
-
-    # building_sizer_config_json = initial_building_sizer_request.to_json()  # type: ignore
-    building_sizer_request = initial_building_sizer_request
-
-    # Store the hash of each request in a set for loop detection
-    previous_iterations = {building_sizer_request.get_hash()}
-
-    # Store all iterations of building sizer requests in order
-    building_sizer_iterations: List[BuildingSizerRequest] = []
-    finished = False
-    all_ratings = ""
-    all_hisim_kpis = []
-    all_ratings_list = []
-    start = datetime.now()
-    while not finished:
-        print("\n")
-        print("-----------------------------")
-        print("NEXT ITERATION")
-        print("-----------------------------")
-        print("\n")
-
-        # Get result by calling building_sier_algorithm_no_utsp locally
-        building_sizer_algorithm_no_utsp.main_without_utsp(
-            request=building_sizer_request,
-            main_building_sizer_request_directory=main_building_sizer_request_directory,
-            hisim_simulation_parameters=hisim_simulation_parameters,
+    while not result_obj.finished and result_obj.subsequent_building_sizer_request:
+        request = result_obj.subsequent_building_sizer_request
+        request_hash = request.get_hash()
+        if request_hash in previous_hashes:
+            raise RuntimeError(f"Loop detected: {request}")
+        previous_hashes.add(request_hash)
+        iterations.append(request)
+        print("--- OPTIMIZATION ITERATION ---")
+        all_kpis, rating_lists, result_obj, iteration_counter = run_one_iteration(
+            request,
+            main_building_sizer_request_directory,
+            hisim_simulation_parameters,
+            result_path,
+            all_kpis,
+            rating_lists,
+            iteration_counter,
         )
 
-        # Define the path to the result file
-        result_file = os.path.join(
-            main_building_sizer_request_directory, "results", "status.json"
-        )
+    if not any(all_kpis):
+        raise ValueError("No HiSIM KPIs collected. Check config or simulation.")
 
-        # Once the job is finished, check if the result file exists
-        timeout = 600  # Timeout in seconds (adjust as needed)
-        start_time = time.time()
-        while not os.path.exists(result_file):
-            if time.time() - start_time > timeout:
-                raise TimeoutError(
-                    f"Result file '{result_file}' was not created within the timeout period."
-                )
-            # print(f"Waiting for '{result_file}' to be created...")
-            time.sleep(10)
-
-        # Once the file exists, read it
-        # Get the content of the result file created by the Building Sizer
-        with open(
-            result_file,
-            "r",
-            encoding="utf-8",
-        ) as file:
-            status_json = json.load(file)
-            print("File read successfully:", status_json)
-
-        building_sizer_result: BuildingSizerResult = BuildingSizerResult.from_dict(status_json)  # type: ignore
-
-        # Check if this was the final iteration and the building sizer is finished
-        finished = building_sizer_result.finished
-        # Get the building sizer configuration for the next request
-        if building_sizer_result.subsequent_building_sizer_request is not None:
-            # overwrite old building sizer request with new request
-            building_sizer_request = (
-                building_sizer_result.subsequent_building_sizer_request
-            )
-            # Loop detection: check if the same building sizer request has been encountered before (that would result in an endless loop)
-            request_hash = building_sizer_request.get_hash()
-
-            if request_hash in previous_iterations:
-                raise RuntimeError(
-                    f"Detected a loop: the following building sizer request has already been sent before.\n{building_sizer_request}"
-                )
-            previous_iterations.add(request_hash)
-
-            # Store the building sizer
-            building_sizer_iterations.append(building_sizer_request)
-            print(f"Interim results: {building_sizer_result.result}")
-            # store the hisim kpis of this iteration (generation)
-            hisim_kpis_of_this_iteration = get_hisim_kpis_of_iteration(
-                building_sizer_request,
-                main_building_sizer_request_directory,
-                hisim_simulation_parameters,
-                all_hisim_kpis,
-            )
-
-            all_ratings += f"{list(hisim_kpis_of_this_iteration.values())}\n"
-            all_hisim_kpis.append(hisim_kpis_of_this_iteration)
-            all_ratings_list.append(
-                get_ratings(
-                    hisim_kpis_of_this_iteration.values(), building_sizer_request
-                )
-            )
-            for (
-                hisim_config_str,
-                kpi_result_dict,
-            ) in hisim_kpis_of_this_iteration.items():
-                print(
-                    "ratings of energy system config for this iteration",
-                    return_config_as_dict(hisim_config_str),
-                    ": ",
-                    str(building_sizer_request.kpi_for_rating.value),
-                    "= ",
-                    get_rating(kpi_result_dict, building_sizer_request),
-                )
-                print("---")
-
-    print("len all hisim kpis", len(all_hisim_kpis))
-    print("len hisim kpis of this iteration ", len(hisim_kpis_of_this_iteration))
     plot_ratings_of_each_iteration_as_boxplots(
-        all_ratings_list, main_building_sizer_request_directory, building_sizer_request
+        rating_lists, main_building_sizer_request_directory, request
     )
-
-    df_all_ratings = create_table_with_all_energy_system_configs_and_hisim_kpis(
-        all_hisim_kpis, main_building_sizer_request_directory, building_sizer_request
+    df_only_ratings = create_table_with_all_energy_system_configs_and_hisim_kpis(
+        all_kpis, main_building_sizer_request_directory, request
     )
     plot_ratings_of_each_energy_system_config_as_scatterplot(
-        dataframe_with_ratings=df_all_ratings,
-        request=building_sizer_request,
-        main_building_sizer_request_directory=main_building_sizer_request_directory,
+        df_only_ratings, request, main_building_sizer_request_directory
     )
+    make_finish_flag_for_successful_executions(main_building_sizer_request_directory)
     print(f"Finished. Optimization took {datetime.now() - start}.")
-    make_finish_flag_for_successful_executions(
-        result_directory=main_building_sizer_request_directory)
 
 
 def create_table_with_all_energy_system_configs_and_hisim_kpis(
@@ -444,6 +451,7 @@ def create_table_with_all_energy_system_configs_and_hisim_kpis(
     """
     all_data: Dict = {}
     only_ratings: Dict = {}
+
     for iteration, generation in enumerate(generations):
         for hisim_config_path, kpi_dict in generation.items():
             d_config = return_config_as_dict(hisim_config_path)
@@ -473,6 +481,10 @@ def create_table_with_all_energy_system_configs_and_hisim_kpis(
 
     df = pd.DataFrame.from_dict(all_data)
     df_all_ratings = pd.DataFrame.from_dict(only_ratings)
+    # merge config columns
+    df = add_energy_system_labels(df=df, keys=d_config.keys())
+    df_all_ratings = add_energy_system_labels(df=df_all_ratings, keys=d_config.keys())
+
     # sort according to kpi for rating
     sorted_df_all_ratings = df_all_ratings.sort_values(
         by=[str(request.kpi_for_rating.value)]

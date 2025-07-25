@@ -36,6 +36,8 @@ class SizingOptions:
     heating_system: List[HeatingSystems] = field(
         default_factory=lambda: [HeatingSystems.HEAT_PUMP, HeatingSystems.GAS_HEATING]
     )
+    #: list of bools indicating if battery and energy management system (EMS) are included
+    use_battery_and_ems: List[bool] = (field(default_factory=lambda: [True, False]),)
 
     # these lists define the layout of the individual vectors
     #: list of technologies (boolean attributes) considered in the optimization
@@ -47,6 +49,7 @@ class SizingOptions:
         default_factory=lambda: [
             "share_of_maximum_pv_potential",
             "heating_system",
+            "use_battery_and_ems",
         ]
     )
     # this list defines the probabilites of each component to be included at the beginning
@@ -74,9 +77,6 @@ class SizingOptions:
 class Individual:
     """System config as numerical vectors."""
 
-    #: encoding of the individual (HiSIM configuration) of the boolean part - each digit decides if related technology is included or not
-    # bool_vector: List[bool] = field(default_factory=list)
-    #: encoding of the individual (HiSIM configuration) of the discrete part - each digit describes the size of the considered technology
     discrete_vector: List[float] = field(default_factory=list)
 
     @staticmethod
@@ -90,19 +90,38 @@ class Individual:
         :rtype individual: Individual
         """
         individual = Individual()
-        # # randomly assign the bool attributes True or False
-        # assert len(options.probabilities) == len(options.bool_attributes), (
-        #     "Invalid SizingOptions: members probabilities and bool_attributes have different length. "
-        #     "There must be one probability for each bool attribute."
-        # )
-        # for probability in options.probabilities:
-        #     dice = random.uniform(0, 1)  # random number between zero and one
-        #     individual.bool_vector.append(dice < probability)
-        # randomly assign the discrete attributes depending on the allowed values
+        discrete_vector = []
+
+        # We'll store values temporarily by name
+        temp_values = {}
+
         for component in options.discrete_attributes:
             allowed_values = getattr(options, component)
-            individual.discrete_vector.append(random.choice(allowed_values))
+
+            if component == "share_of_maximum_pv_potential":
+                pv_share = random.choice(allowed_values)
+                temp_values[component] = pv_share
+                discrete_vector.append(pv_share)
+
+            elif component == "use_battery_and_ems":
+                pv_share = temp_values.get("share_of_maximum_pv_potential", 0)
+                if pv_share == 0.0:
+                    battery_allowed_values = [False]
+                else:
+                    battery_allowed_values = getattr(options, component)
+                battery_choice = random.choice(battery_allowed_values)
+                discrete_vector.append(battery_choice)
+
+            else:
+                discrete_vector.append(random.choice(allowed_values))
+
+        individual.discrete_vector = discrete_vector
         return individual
+
+        # for component in options.discrete_attributes:
+        #     allowed_values = getattr(options, component)
+        #     individual.discrete_vector.append(random.choice(allowed_values))
+        # return individual
 
 
 @dataclass_json

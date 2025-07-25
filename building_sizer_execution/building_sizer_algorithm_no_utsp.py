@@ -234,6 +234,14 @@ def decide_based_on_hisim_config_which_module_to_choose(hisim_config_path: str) 
             hisim_module = "household_pellets_building_sizer"
         elif heating_system == HeatingSystems.WOOD_CHIP_HEATING:
             hisim_module = "household_wood_chips_building_sizer"
+        elif heating_system == HeatingSystems.HYDROGEN_HEATING:
+            hisim_module = "household_hydrogen_boiler_building_sizer"
+        elif heating_system == HeatingSystems.ELECTRIC_HEATING:
+            hisim_module = "household_electric_heating_building_sizer"
+        elif heating_system == HeatingSystems.GAS_SOLAR_THERMAL:
+            hisim_module = "household_gas_solar_thermal_building_sizer"
+        elif heating_system == HeatingSystems.HEAT_PUMP_SOLAR_THERMAL:
+            hisim_module = "household_heatpump_solar_thermal_building_sizer"
         else:
             raise ValueError(
                 f"Heating system {heating_system} not recognized or has no corresponding hisim system setup yet."
@@ -381,19 +389,43 @@ def get_results_from_requisite_hisim_configs_slurm(
     )
 
     # Step 4: Load results
-    timeout = 120
+    timeout = 180
     start_time = time.time()
+    decoder = json.JSONDecoder()
     while True:
-        with open(result_dict_path, "r", encoding="utf-8") as result_file:
-            result_dict = json.load(result_file)
-        if result_dict:
-            return result_dict
+        try:
+            with open(result_dict_path, "r", encoding="utf-8") as result_file:
+                content = result_file.read()
+            result_dicts = {}
+            idx = 0
+            counter = 0
+            while idx < len(content):
+                try:
+                    obj, offset = decoder.raw_decode(content[idx:])
+                    if isinstance(obj, dict):
+                        # Use a unique string key (e.g., "entry_0", "entry_1", etc.)
+                        result_dicts[f"entry_{counter}"] = obj
+                        counter += 1
+                    else:
+                        print(
+                            f"Skipping non-dict JSON object at index {idx}: {type(obj)}"
+                        )
+                    idx += offset
+                except json.JSONDecodeError:
+                    print(f"Skipping broken JSON at index: {idx}")
+                    idx += 1  # move forward one character and retry
+
+            if result_dicts:
+                return result_dicts
+            print(f"No valid JSON found in {result_dict_path}. Waiting...")
+        except Exception as e:
+            print(f"File read error: {e}. Retrying...")
+
+        time.sleep(10)
         if time.time() - start_time > timeout:
             raise TimeoutError(
-                f"Result dict {result_dict_path} was not filled within the timeout."
+                f"Could not read valid JSON from {result_dict_path} within timeout."
             )
-        print(f"Waiting for result dict {result_dict_path} to be filled...")
-        time.sleep(10)
 
 
 def trigger_next_iteration(
@@ -466,19 +498,26 @@ def building_sizer_iteration(
 
     # Get the relevant result files from all requisite requests and turn them into rated individuals
     rated_individuals = []
-    for sim_config_str, kpi_result in result_dict.items():
+    for result_entry_key, result_entry in result_dict.items():
 
-        # Extract the rating for each HiSim config
-        # TODO: check if rating works
-        kpi_instance: KPIConfig = KPIConfig.from_dict(kpi_result)  # type: ignore
-        rating = kpi_instance.get_kpi_for_rating(chosen_kpi=request.kpi_for_rating)
-        with open(sim_config_str, "r", encoding="utf-8") as hisim_config:
-            config: ModularHouseholdConfig = ModularHouseholdConfig.from_dict(json.load(hisim_config))  # type: ignore
-        individual = individual_encoding_no_utsp.create_individual_from_config(
-            config.energy_system_config_, request.options
-        )
-        r = individual_encoding_no_utsp.RatedIndividual(individual, rating)
-        rated_individuals.append(r)
+        for sim_config_str, kpi_result in result_entry.items():
+
+            # Extract the rating for each HiSim config
+            # TODO: check if rating works
+            try:
+                kpi_instance: KPIConfig = KPIConfig.from_dict(kpi_result)  # type: ignore
+            except:
+                raise ValueError(
+                    f"Could not convert kpi_result to KPIConfig: {kpi_result}. "
+                )
+            rating = kpi_instance.get_kpi_for_rating(chosen_kpi=request.kpi_for_rating)
+            with open(sim_config_str, "r", encoding="utf-8") as hisim_config:
+                config: ModularHouseholdConfig = ModularHouseholdConfig.from_dict(json.load(hisim_config))  # type: ignore
+            individual = individual_encoding_no_utsp.create_individual_from_config(
+                config.energy_system_config_, request.options
+            )
+            r = individual_encoding_no_utsp.RatedIndividual(individual, rating)
+            rated_individuals.append(r)
 
     # select best individuals
     parents = evo_alg.selection(
@@ -553,6 +592,9 @@ def main_without_utsp(
         )
     else:
         # First iteration; initialize algorithm and specify initial hisim requests
+        print(
+            "First iteration is for initializing the algorithm and specifying initial hisim requests.\n"
+        )
         initial_hisim_energy_system_configs = (
             individual_encoding_no_utsp.create_random_system_configs(
                 request.population_size, request.options
