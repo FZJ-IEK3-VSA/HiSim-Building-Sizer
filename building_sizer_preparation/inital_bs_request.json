@@ -27,7 +27,7 @@
             "heating_system"
         ]
     },
-    "kpi_for_rating": "Total Costs [\u20ac]",
+    "kpi_for_rating": "Annualized Total Costs [\u20ac]",
     "archetype_config_": null,
     "requisite_hisim_config_paths": []
 }
