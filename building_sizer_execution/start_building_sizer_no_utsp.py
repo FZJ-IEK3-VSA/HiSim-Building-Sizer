@@ -3,6 +3,7 @@
 import sys
 import json
 import os
+from pathlib import Path
 import time
 import numpy as np
 import re
@@ -121,7 +122,7 @@ def plot_ratings_of_each_energy_system_config_as_scatterplot(
     # set labels
     ax.set_xlabel("Energy system combination")
     ax.set_ylabel(str(request.kpi_for_rating.value))
-    print("DEBUG", dataframe_with_ratings["energy_system_combination"])
+    # print("DEBUG", dataframe_with_ratings["energy_system_combination"])
     # Creating plot
     plt.scatter(x=dataframe_with_ratings["energy_system_combination"], y=dataframe_with_ratings[str(request.kpi_for_rating.value)])  # type: ignore
     # Rotating X-axis labels
@@ -153,6 +154,7 @@ def get_hisim_kpis_of_iteration(
     kpi_values = None
     hisim_config_values = None
     hisim_kpis: Dict = {}
+    file_path: str = ""
     # Walk through all subdirectories
     for root, dirs, files in os.walk(main_building_sizer_request_directory):
         for filename in files:
@@ -177,7 +179,7 @@ def get_hisim_kpis_of_iteration(
                     dicti = {hisim_config_values_str: kpi_values}
                     hisim_kpis.update(dicti)
 
-    return hisim_kpis
+    return hisim_kpis, file_path
 
 
 def get_rating(kpi_dict: Dict, request: BuildingSizerRequest) -> float:
@@ -310,7 +312,7 @@ def run_one_iteration(
     )
     wait_for_result(result_file)
     result = get_result_from_json(result_file)
-    kpis = get_hisim_kpis_of_iteration(output_dir)
+    kpis, hisim_result_path = get_hisim_kpis_of_iteration(output_dir)
     if kpis:
         all_kpis.append(kpis)
         rating_lists.append(get_ratings(kpis.values(), request))
@@ -325,7 +327,7 @@ def run_one_iteration(
             )
             print("---")
     iteration_counter += 1
-    return all_kpis, rating_lists, result, iteration_counter
+    return all_kpis, hisim_result_path, rating_lists, result, iteration_counter
 
 
 def main(
@@ -394,14 +396,16 @@ def main(
     iterations, all_kpis, rating_lists = [], [], []
     # === First iteration (always run) for initialization ===
     print("\n--- INITIALIZATION ITERATION ---")
-    all_kpis, rating_lists, result_obj, iteration_counter = run_one_iteration(
-        initial_building_sizer_request,
-        main_building_sizer_request_directory,
-        hisim_simulation_parameters,
-        result_path,
-        all_kpis,
-        rating_lists,
-        iteration_counter,
+    all_kpis, hisim_result_path, rating_lists, result_obj, iteration_counter = (
+        run_one_iteration(
+            initial_building_sizer_request,
+            main_building_sizer_request_directory,
+            hisim_simulation_parameters,
+            result_path,
+            all_kpis,
+            rating_lists,
+            iteration_counter,
+        )
     )
 
     while not result_obj.finished and result_obj.subsequent_building_sizer_request:
@@ -412,14 +416,16 @@ def main(
         previous_hashes.add(request_hash)
         iterations.append(request)
         print("--- OPTIMIZATION ITERATION ---")
-        all_kpis, rating_lists, result_obj, iteration_counter = run_one_iteration(
-            request,
-            main_building_sizer_request_directory,
-            hisim_simulation_parameters,
-            result_path,
-            all_kpis,
-            rating_lists,
-            iteration_counter,
+        all_kpis, hisim_result_path, rating_lists, result_obj, iteration_counter = (
+            run_one_iteration(
+                request,
+                main_building_sizer_request_directory,
+                hisim_simulation_parameters,
+                result_path,
+                all_kpis,
+                rating_lists,
+                iteration_counter,
+            )
         )
 
     if not any(all_kpis):
@@ -429,7 +435,10 @@ def main(
         rating_lists, main_building_sizer_request_directory, request
     )
     df_only_ratings = create_table_with_all_energy_system_configs_and_hisim_kpis(
-        all_kpis, main_building_sizer_request_directory, request
+        generations=all_kpis,
+        main_building_sizer_request_directory=main_building_sizer_request_directory,
+        request=request,
+        hisim_result_path=hisim_result_path,
     )
     plot_ratings_of_each_energy_system_config_as_scatterplot(
         df_only_ratings, request, main_building_sizer_request_directory
@@ -438,10 +447,26 @@ def main(
     print(f"Finished. Optimization took {datetime.now() - start}.")
 
 
+def extract_hisim_config_hash_number(hisim_kpi_filepath: str):
+    """Extract hash number from hisim config path."""
+    # Get the parent folder name (the "__<hash>" part)
+    path = Path(hisim_kpi_filepath)
+    hash_folder = path.parent.name
+
+    # Extract the number with optional minus sign
+    match = re.fullmatch(r"__(-?\d+)", hash_folder)
+    if match:
+        hash_number = match.group(1)
+    else:
+        hash_number = "-"
+    return hash_number
+
+
 def create_table_with_all_energy_system_configs_and_hisim_kpis(
     generations: Dict,
     main_building_sizer_request_directory: str,
     request: BuildingSizerRequest,
+    hisim_result_path: str,
 ) -> pd.DataFrame:
     """
     Writes csv containing all kpi values (HiSIM results) of all individuals (HiSim configuration) of each generation (iteration).
@@ -453,11 +478,16 @@ def create_table_with_all_energy_system_configs_and_hisim_kpis(
     only_ratings: Dict = {}
 
     for iteration, generation in enumerate(generations):
-        for hisim_config_path, kpi_dict in generation.items():
-            d_config = return_config_as_dict(hisim_config_path)
+        for hisim_config_str, kpi_dict in generation.items():
+            d_config = return_config_as_dict(hisim_config_str)
             d_kpi = kpi_dict
             d_total = dict(d_config, **d_kpi)
             d_total["iteration"] = iteration
+            # extract hisim config hash number
+            d_total["hisim_config_hash"] = extract_hisim_config_hash_number(
+                hisim_kpi_filepath=hisim_result_path
+            )
+            d_total["hisim_kpi_result_file"] = hisim_result_path
 
             rating_kpi = get_rating(kpi_dict, request)
             d_only_ratings = dict(
