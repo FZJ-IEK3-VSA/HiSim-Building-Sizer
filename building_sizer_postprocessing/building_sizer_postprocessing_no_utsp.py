@@ -29,14 +29,17 @@ def go_through_parent_folder_and_find_all_building_sizer_results(
 def get_min_row_for_column(file_path: Path, column: str) -> pd.Series | None:
     """Read a csv file and return the row with the minimum value for a given column."""
     try:
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, header=[0, 1])  # Expecting MultiIndex columns
+        if not isinstance(column, tuple):
+            print(f"Expected a tuple for multiindex column, got {column} instead.")
+            return None
         if column not in df.columns:
-            print(f"Column {column} not found in {file_path}")
+            print(f"Column {column} not found in columns {df.columns} from file {file_path}")
             return None
         # identify row with minimum value of column
         min_row = df.loc[df[column].idxmin()].copy()
         # add filepath to source_file column
-        min_row["source_file"] = str(file_path)
+        min_row[("Input", "source_file")] = str(file_path)
         return min_row
     except Exception as e:
         print(f"Error reading and processing {file_path}: {e}")
@@ -72,7 +75,7 @@ def run_minima_extraction(
     for column in columns:
         result_df = collect_min_rows(files, column)
         if not result_df.empty:
-            save_minima_to_csv(result_df, column, parent_folder)
+            save_minima_to_csv(result_df, column[1], parent_folder)
         else:
             print(f"No data found for column: {column}")
 
@@ -80,10 +83,11 @@ def run_minima_extraction(
 # ---------- Run It ----------
 if __name__ == "__main__":
     PARENT_FOLDER = Path(
-        "/fast/home/k-rieck/hisim_building_clustering/test_results/F_hisim_building_sizer_optimization/2/bs_requests_20250804_2139"
+        "/fast/home/k-rieck/hisim_building_clustering/test_results/F_hisim_building_sizer_optimization/2/bs_requests_20250805_1404"
     )
-    kpi_config_fields = [f.name for f in fields(KPIConfig)]
-    print(kpi_config_fields)
-    COLUMNS_OF_INTEREST = kpi_config_fields  # Add more as needed
+    # kpi_config_fields = [f.name for f in fields(KPIConfig)]
+    kpi_config_fields = ["annualized_total_costs_in_euro", "annualized_energy_costs_in_euro", "annualized_net_investment_costs_in_euro", "annualized_total_co2_emissions_in_kg", "annualized_purchased_energy_consumption_in_kwh", "deviation_from_min_indoor_temperature"]
+    column_of_interest = [("Output", kpi_field) for kpi_field in kpi_config_fields]
+    COLUMNS_OF_INTEREST = column_of_interest  # Add more as needed
 
     run_minima_extraction(PARENT_FOLDER, COLUMNS_OF_INTEREST)

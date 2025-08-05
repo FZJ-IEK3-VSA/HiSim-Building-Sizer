@@ -450,6 +450,7 @@ def main(
     building_sizer_config_file: Union[str, BuildingSizerConfig],
     building_sizer_result_folder: Optional[str] = None,
     remove_hisim_result_folder: bool = True,
+    make_scatter_plot_of_rating: bool = False
 ):
     """
     Default function to call the building sizer.
@@ -562,9 +563,12 @@ def main(
         building_archetype_config_dict=my_building_archetpye_config,
         hisim_simulation_parameters=my_config.hisim_simulation_parameters,
     )
-    plot_ratings_of_each_energy_system_config_as_scatterplot(
-        df_only_ratings, request, main_building_sizer_request_directory
-    )
+    if make_scatter_plot_of_rating:
+        plot_ratings_of_each_energy_system_config_as_scatterplot(
+            df_only_ratings, request, main_building_sizer_request_directory
+        )
+    del df_only_ratings
+
     # remove hisim results for creating disk space
     hisim_result_folder = Path(main_building_sizer_request_directory) / "hisim_results"
     if (
