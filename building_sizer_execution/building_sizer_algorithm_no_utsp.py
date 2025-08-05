@@ -81,7 +81,9 @@ class BuildingSizerRequest:
         default_factory=individual_encoding_no_utsp.SizingOptions()
     )
     #: kpi for rating simulation results
-    kpi_for_rating: KPIForRatingInOptimization = KPIForRatingInOptimization.TOTAL_COSTS
+    kpi_for_rating: KPIForRatingInOptimization = (
+        KPIForRatingInOptimization.ANNUALIZED_TOTAL_COSTS
+    )
     # parameters for HiSim
     #: builing parameters of HiSIM (independet of system config, climate, house type, etc. need to be defined)
     archetype_config_: Optional[ArcheTypeConfig] = None
@@ -489,13 +491,10 @@ def building_sizer_iteration(
         main_building_sizer_request_directory,
         hisim_simulation_parameters,
     )
-    # print("result dict length after serialized slurm jobs", len(result_dict))
-    # result_dict = get_results_from_requisite_hisim_configs(
-    #     request.requisite_hisim_config_paths,
-    #     main_building_sizer_request_directory,
-    #     hisim_simulation_parameters,
-    # )
-
+    if not result_dict or len(result_dict) == 0:
+        raise ValueError(
+            "The result dict is empty. Something went wrong with the hisim simulation. Please check the hisim slurm output files."
+        )
     # Get the relevant result files from all requisite requests and turn them into rated individuals
     rated_individuals = []
     for result_entry_key, result_entry in result_dict.items():
@@ -503,19 +502,21 @@ def building_sizer_iteration(
         for sim_config_str, kpi_result in result_entry.items():
 
             # Extract the rating for each HiSim config
-            # TODO: check if rating works
             try:
                 kpi_instance: KPIConfig = KPIConfig.from_dict(kpi_result)  # type: ignore
             except:
-                raise ValueError(
-                    f"Could not convert kpi_result to KPIConfig: {kpi_result}. "
+                print(
+                    f"Could not convert kpi_result to KPIConfig: {kpi_result} from {sim_config_str}. "
+                    "This simulation result will be skipped."
                 )
+                continue
             rating = kpi_instance.get_kpi_for_rating(chosen_kpi=request.kpi_for_rating)
             with open(sim_config_str, "r", encoding="utf-8") as hisim_config:
                 config: ModularHouseholdConfig = ModularHouseholdConfig.from_dict(json.load(hisim_config))  # type: ignore
             individual = individual_encoding_no_utsp.create_individual_from_config(
                 config.energy_system_config_, request.options
             )
+
             r = individual_encoding_no_utsp.RatedIndividual(individual, rating)
             rated_individuals.append(r)
 
@@ -533,14 +534,23 @@ def building_sizer_iteration(
     #     population_size=population_size,
     #     options=options,
     # )
-
-    new_individuals = evo_alg.evolution(
-        parents=parent_individuals,
-        crossover_probability=request.crossover_probability,
-        mutation_probability=request.mutation_probability,
-        mode=decide_on_mode(),
-        options=request.options,
-    )
+    try:
+        new_individuals = evo_alg.evolution(
+            parents=parent_individuals,
+            crossover_probability=request.crossover_probability,
+            mutation_probability=request.mutation_probability,
+            mode=decide_on_mode(),
+            options=request.options,
+        )
+    except:
+        raise ValueError(
+            "Something in iteration went wrong. ",
+            parent_individuals,
+            "vs",
+            request.population_size,
+            " Rated individuals ",
+            rated_individuals,
+        )
 
     # combine combine parents and children
     new_individuals.extend(parent_individuals)
@@ -599,6 +609,9 @@ def main_without_utsp(
             individual_encoding_no_utsp.create_random_system_configs(
                 request.population_size, request.options
             )
+        )
+        print(
+            f"Created {len(initial_hisim_energy_system_configs)} inital hisim energy system configs based on request."
         )
 
         next_building_sizer_request = trigger_next_iteration(

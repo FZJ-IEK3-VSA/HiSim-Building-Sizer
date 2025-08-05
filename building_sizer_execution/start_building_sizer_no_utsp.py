@@ -4,6 +4,7 @@ import sys
 import json
 import os
 from pathlib import Path
+import shutil
 import time
 import numpy as np
 import re
@@ -38,104 +39,6 @@ sys.path.append(
     "/fast/home/k-rieck/jobs_hisim/cluster-hisim-paper/job_array_for_hisim_mass_simus/cluster_job_management"
 )
 from job_management_functions import make_finish_flag_for_successful_executions
-
-
-def plot_ratings_of_each_iteration_as_boxplots(
-    ratings: List[List[float]],
-    main_building_sizer_request_directory: str,
-    request: BuildingSizerRequest,
-) -> None:
-    """
-    Generate a boxplot for each generation showing the range of ratings
-
-    :param ratings: nested list, creating a list of ratings for each generation
-    :type ratings: List[List[float]]
-    """
-    fig = plt.figure(figsize=(10, 7))
-    ax = fig.add_subplot(111)
-    ax.set_xlabel("Iterations")
-    ax.set_ylabel(f"{request.kpi_for_rating.value}")
-    # Creating plot
-    _ = ax.boxplot(ratings)  # type: ignore
-    # show plot
-    plt.show()
-    plt.savefig(
-        os.path.join(
-            main_building_sizer_request_directory, "ratings_per_iteration_boxplots.png"
-        )
-    )
-
-
-def add_energy_system_labels(df: pd.DataFrame, keys: list[str]) -> pd.DataFrame:
-    """Add a column 'energy_system_label' to the DataFrame based on specified keys."""
-
-    def make_label(row):
-        """Make label for one row."""
-        label_parts = []
-        for key in keys:
-            value = row[key]
-
-            if pd.isna(value):
-                part = f"{key}=NaN"
-
-            elif key == "share_of_maximum_pv_potential":
-                try:
-                    part = f"PV {round(float(value) * 100)}%"
-                except Exception as e:
-                    raise ValueError(
-                        f"Invalid value for {key}: {value} ({type(value)}): {e}"
-                    )
-
-            elif key == "use_battery_and_ems":
-                try:
-                    value = bool(value)
-                    part = "WithBatteryAndEMS" if value else "NoBatteryAndEMS"
-                except Exception as e:
-                    raise ValueError(
-                        f"Invalid boolean for {key}: {value} ({type(value)}): {e}"
-                    )
-
-            elif isinstance(value, (str, float, int, np.integer, np.floating)):
-                part = str(value)
-
-            else:
-                raise ValueError(f"Unexpected value for {key}: {value} ({type(value)})")
-
-            label_parts.append(part)
-
-        return " + ".join(label_parts)
-
-    df["energy_system_combination"] = df.apply(make_label, axis=1)
-    return df
-
-
-def plot_ratings_of_each_energy_system_config_as_scatterplot(
-    dataframe_with_ratings: pd.DataFrame,
-    request: BuildingSizerRequest,
-    main_building_sizer_request_directory: str,
-) -> None:
-    """
-    Generate scatter plot for all energy system configs and their ratings.
-    """
-    fig = plt.figure(figsize=(10, 7))
-    ax = fig.add_subplot(111)
-    # set labels
-    ax.set_xlabel("Energy system combination")
-    ax.set_ylabel(str(request.kpi_for_rating.value))
-    # print("DEBUG", dataframe_with_ratings["energy_system_combination"])
-    # Creating plot
-    plt.scatter(x=dataframe_with_ratings["energy_system_combination"], y=dataframe_with_ratings[str(request.kpi_for_rating.value)])  # type: ignore
-    # Rotating X-axis labels
-    plt.xticks(rotation=45, ha="right", fontsize=6)
-    plt.tight_layout()
-    # show plot
-    plt.show()
-    plt.savefig(
-        os.path.join(
-            main_building_sizer_request_directory,
-            "ratings_per_energy_system_scatter.png",
-        )
-    )
 
 
 # TODO: this is already called in building sizer iteration or why is it double?
@@ -330,9 +233,223 @@ def run_one_iteration(
     return all_kpis, hisim_result_path, rating_lists, result, iteration_counter
 
 
+def extract_hisim_config_hash_number(hisim_kpi_filepath: str):
+    """Extract hash number from hisim config path."""
+    # Get the parent folder name (the "__<hash>" part)
+    path = Path(hisim_kpi_filepath)
+    hash_folder = path.parent.name
+
+    # Extract the number with optional minus sign
+    match = re.fullmatch(r"__(-?\d+)", hash_folder)
+    if match:
+        hash_number = match.group(1)
+    else:
+        hash_number = "-"
+    return hash_number
+
+
+def create_table_with_all_energy_system_configs_and_hisim_kpis(
+    generations: Dict,
+    main_building_sizer_request_directory: str,
+    request,
+    hisim_result_path: str,
+    building_archetype_config_dict: Dict,
+    hisim_simulation_parameters: Dict,
+) -> pd.DataFrame:
+    """
+    Generates a csv table with all hisim configurations and KPIs for each generation.
+    Adds a MultiIndex: ('Input', key) for input parameters, ('Output', key) for KPIs.
+    """
+
+    # Extract simulation metadata
+    hisim_meta_keys = ["startDate", "endDate", "secondsPerTimestep"]
+    subdict_hisim_parameters = {
+        k: hisim_simulation_parameters[k] for k in hisim_meta_keys
+    }
+
+    input_data = []
+    output_data = []
+    only_ratings: Dict = {}
+
+    for iteration, generation in enumerate(generations):
+        for hisim_config_str, kpi_dict in generation.items():
+            d_config = return_config_as_dict(hisim_config_str)
+            d_inputs = {
+                "iteration": iteration,
+                **d_config,
+                **building_archetype_config_dict,
+                **subdict_hisim_parameters,
+                "hisim_config_hash": extract_hisim_config_hash_number(
+                    hisim_kpi_filepath=hisim_result_path
+                ),
+                "hisim_kpi_result_file": hisim_result_path,
+            }
+            d_outputs = {**kpi_dict}
+
+            input_data.append(d_inputs)
+            output_data.append(d_outputs)
+
+            # rating df for plotting
+            rating_kpi = get_rating(kpi_dict, request)
+            d_only_ratings = dict(
+                d_config, **{f"{request.kpi_for_rating.value}": rating_kpi}
+            )
+            d_only_ratings["iteration"] = iteration
+            for name, value in d_only_ratings.items():
+                if name not in only_ratings:
+                    only_ratings[name] = []
+                if isinstance(value, float):
+                    value = round(value, 2)
+                only_ratings[name].append(value)
+
+    # Build DataFrames
+    df_inputs = pd.DataFrame(input_data)
+    df_outputs = pd.DataFrame(output_data)
+
+    # Align lengths
+    assert len(df_inputs) == len(
+        df_outputs
+    ), "Input and output data must match in length."
+
+    # Create multiindex columns
+    df_inputs.columns = pd.MultiIndex.from_tuples(
+        [("Input", col) for col in df_inputs.columns]
+    )
+    df_outputs.columns = pd.MultiIndex.from_tuples(
+        [("Output", col) for col in df_outputs.columns]
+    )
+
+    # Concatenate
+    df_combined = pd.concat([df_inputs, df_outputs], axis=1)
+    # Add energy system labels
+    df_combined = add_energy_system_labels(df=df_combined, keys=d_config.keys())
+
+    # Save full csv
+    output_csv_path = os.path.join(
+        main_building_sizer_request_directory, "building_sizer_results.csv"
+    )
+    df_combined.to_csv(output_csv_path, index=False)
+
+    # Extract rating KPI and sort
+    df_all_ratings = pd.DataFrame.from_dict(only_ratings)
+    df_all_ratings = add_energy_system_labels(df=df_all_ratings, keys=d_config.keys())
+    # sort according to kpi for rating
+    sorted_df_all_ratings = df_all_ratings.sort_values(
+        by=[str(request.kpi_for_rating.value)]
+    )
+
+    return sorted_df_all_ratings
+
+
+def plot_ratings_of_each_iteration_as_boxplots(
+    ratings: List[List[float]],
+    main_building_sizer_request_directory: str,
+    request: BuildingSizerRequest,
+) -> None:
+    """
+    Generate a boxplot for each generation showing the range of ratings
+
+    :param ratings: nested list, creating a list of ratings for each generation
+    :type ratings: List[List[float]]
+    """
+    fig = plt.figure(figsize=(10, 7))
+    ax = fig.add_subplot(111)
+    ax.set_xlabel("Iterations")
+    ax.set_ylabel(f"{request.kpi_for_rating.value}")
+    # Creating plot
+    _ = ax.boxplot(ratings)  # type: ignore
+    # show plot
+    plt.show()
+    plt.savefig(
+        os.path.join(
+            main_building_sizer_request_directory, "ratings_per_iteration_boxplots.png"
+        )
+    )
+
+
+def add_energy_system_labels(df: pd.DataFrame, keys: list[str]) -> pd.DataFrame:
+    """Add a column 'energy_system_label' to the DataFrame based on specified keys."""
+
+    def make_label(row):
+        """Make label for one row."""
+        label_parts = []
+        for key in keys:
+            value = row[key]
+
+            if pd.isna(value):
+                part = f"{key}=NaN"
+
+            elif key == "share_of_maximum_pv_potential":
+                try:
+                    part = f"PV {round(float(value) * 100)}%"
+                except Exception as e:
+                    raise ValueError(
+                        f"Invalid value for {key}: {value} ({type(value)}): {e}"
+                    )
+
+            elif key == "use_battery_and_ems":
+                try:
+                    value = bool(value)
+                    part = "WithBatteryAndEMS" if value else "NoBatteryAndEMS"
+                except Exception as e:
+                    raise ValueError(
+                        f"Invalid boolean for {key}: {value} ({type(value)}): {e}"
+                    )
+
+            elif isinstance(value, (str, float, int, np.integer, np.floating)):
+                part = str(value)
+
+            else:
+                raise ValueError(f"Unexpected value for {key}: {value} ({type(value)})")
+
+            label_parts.append(part)
+
+        return " + ".join(label_parts)
+
+    # add new colum
+    if isinstance(df.columns, pd.MultiIndex):
+        df[("Input", "energy_system_combination")] = df["Input"].apply(
+            make_label, axis=1
+        )
+    else:
+        df["energy_system_combination"] = df.apply(make_label, axis=1)
+
+    return df
+
+
+def plot_ratings_of_each_energy_system_config_as_scatterplot(
+    dataframe_with_ratings: pd.DataFrame,
+    request: BuildingSizerRequest,
+    main_building_sizer_request_directory: str,
+) -> None:
+    """
+    Generate scatter plot for all energy system configs and their ratings.
+    """
+    fig = plt.figure(figsize=(10, 7))
+    ax = fig.add_subplot(111)
+    # set labels
+    ax.set_xlabel("Energy system combination")
+    ax.set_ylabel(str(request.kpi_for_rating.value))
+    # print("DEBUG", dataframe_with_ratings["energy_system_combination"])
+    # Creating plot
+    plt.scatter(x=dataframe_with_ratings["energy_system_combination"], y=dataframe_with_ratings[str(request.kpi_for_rating.value)])  # type: ignore
+    # Rotating X-axis labels
+    plt.xticks(rotation=45, ha="right", fontsize=6)
+    plt.tight_layout()
+    # show plot
+    plt.show()
+    plt.savefig(
+        os.path.join(
+            main_building_sizer_request_directory,
+            "ratings_per_energy_system_scatter.png",
+        )
+    )
+
+
 def main(
     building_sizer_config_file: Union[str, BuildingSizerConfig],
     building_sizer_result_folder: Optional[str] = None,
+    remove_hisim_result_folder: bool = True,
 ):
     """
     Default function to call the building sizer.
@@ -367,6 +484,9 @@ def main(
     my_config, bs_config_datetime_string, bs_config_hash_string, my_config_dict = (
         load_config_and_meta(building_sizer_config_file)
     )
+    my_building_archetpye_config = my_config_dict["initial_building_sizer_request"][
+        "archetype_config_"
+    ]
 
     # Get Hisim simulation parameters
     hisim_simulation_parameters = SimulationParameters.from_dict(
@@ -439,92 +559,26 @@ def main(
         main_building_sizer_request_directory=main_building_sizer_request_directory,
         request=request,
         hisim_result_path=hisim_result_path,
+        building_archetype_config_dict=my_building_archetpye_config,
+        hisim_simulation_parameters=my_config.hisim_simulation_parameters,
     )
     plot_ratings_of_each_energy_system_config_as_scatterplot(
         df_only_ratings, request, main_building_sizer_request_directory
     )
+    # remove hisim results for creating disk space
+    hisim_result_folder = Path(main_building_sizer_request_directory) / "hisim_results"
+    if (
+        remove_hisim_result_folder
+        and hisim_result_folder.exists()
+        and hisim_result_folder.is_dir()
+    ):
+        print("Remove HiSim results ", hisim_result_folder)
+        shutil.rmtree(hisim_result_folder)
+    else:
+        print("Could not remove", hisim_result_folder)
+
     make_finish_flag_for_successful_executions(main_building_sizer_request_directory)
     print(f"Finished. Optimization took {datetime.now() - start}.")
-
-
-def extract_hisim_config_hash_number(hisim_kpi_filepath: str):
-    """Extract hash number from hisim config path."""
-    # Get the parent folder name (the "__<hash>" part)
-    path = Path(hisim_kpi_filepath)
-    hash_folder = path.parent.name
-
-    # Extract the number with optional minus sign
-    match = re.fullmatch(r"__(-?\d+)", hash_folder)
-    if match:
-        hash_number = match.group(1)
-    else:
-        hash_number = "-"
-    return hash_number
-
-
-def create_table_with_all_energy_system_configs_and_hisim_kpis(
-    generations: Dict,
-    main_building_sizer_request_directory: str,
-    request: BuildingSizerRequest,
-    hisim_result_path: str,
-) -> pd.DataFrame:
-    """
-    Writes csv containing all kpi values (HiSIM results) of all individuals (HiSim configuration) of each generation (iteration).
-
-    :param generation: List of all individuals (HiSIM configurations) and KPIs (HiSIM results) in each generation (iteartion)
-    :type generation: List[Dict[str, str]]
-    """
-    all_data: Dict = {}
-    only_ratings: Dict = {}
-
-    for iteration, generation in enumerate(generations):
-        for hisim_config_str, kpi_dict in generation.items():
-            d_config = return_config_as_dict(hisim_config_str)
-            d_kpi = kpi_dict
-            d_total = dict(d_config, **d_kpi)
-            d_total["iteration"] = iteration
-            # extract hisim config hash number
-            d_total["hisim_config_hash"] = extract_hisim_config_hash_number(
-                hisim_kpi_filepath=hisim_result_path
-            )
-            d_total["hisim_kpi_result_file"] = hisim_result_path
-
-            rating_kpi = get_rating(kpi_dict, request)
-            d_only_ratings = dict(
-                d_config, **{f"{request.kpi_for_rating.value}": rating_kpi}
-            )
-            d_only_ratings["iteration"] = iteration
-
-            for name, value in d_total.items():
-                if name not in all_data:
-                    all_data[name] = []
-                if isinstance(value, float):
-                    value = round(value, 2)
-                all_data[name].append(value)
-
-            for name, value in d_only_ratings.items():
-                if name not in only_ratings:
-                    only_ratings[name] = []
-                if isinstance(value, float):
-                    value = round(value, 2)
-                only_ratings[name].append(value)
-
-    df = pd.DataFrame.from_dict(all_data)
-    df_all_ratings = pd.DataFrame.from_dict(only_ratings)
-    # merge config columns
-    df = add_energy_system_labels(df=df, keys=d_config.keys())
-    df_all_ratings = add_energy_system_labels(df=df_all_ratings, keys=d_config.keys())
-
-    # sort according to kpi for rating
-    sorted_df_all_ratings = df_all_ratings.sort_values(
-        by=[str(request.kpi_for_rating.value)]
-    )
-    df.to_csv(
-        os.path.join(
-            main_building_sizer_request_directory, "building_sizer_results.csv"
-        )
-    )
-    return sorted_df_all_ratings
 
 
 if __name__ == "__main__":

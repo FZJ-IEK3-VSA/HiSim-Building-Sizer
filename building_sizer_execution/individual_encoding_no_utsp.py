@@ -16,7 +16,7 @@ sys.path.append("/fast/home/k-rieck/repositories/HiSim")
 from hisim.building_sizer_utils.interface_configs.system_config import (
     EnergySystemConfig,
 )
-from hisim.loadtypes import HeatingSystems
+from hisim.loadtypes import HeatingSystems, ComponentType
 
 
 class BuildingSizerException(Exception):
@@ -36,6 +36,13 @@ class SizingOptions:
     heating_system: List[HeatingSystems] = field(
         default_factory=lambda: [HeatingSystems.HEAT_PUMP, HeatingSystems.GAS_HEATING]
     )
+    #: list of heat distribution systems
+    heat_distribution_system: List[ComponentType] = field(
+        default_factory=lambda: [
+            ComponentType.HEAT_DISTRIBUTION_SYSTEM_FLOORHEATING,
+            ComponentType.HEAT_DISTRIBUTION_SYSTEM_RADIATOR,
+        ]
+    )
     #: list of bools indicating if battery and energy management system (EMS) are included
     use_battery_and_ems: List[bool] = (field(default_factory=lambda: [True, False]),)
 
@@ -44,6 +51,7 @@ class SizingOptions:
         default_factory=lambda: [
             "share_of_maximum_pv_potential",
             "heating_system",
+            "heat_distribution_system",
             "use_battery_and_ems",
         ]
     )
