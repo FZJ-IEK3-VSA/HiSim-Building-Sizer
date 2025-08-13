@@ -76,6 +76,8 @@ class BuildingSizerRequest:
     crossover_probability: float = 0.2
     #: probability for each individual for mutating
     mutation_probability: float = 0.4
+    #: bool for generating random individuals (default) or generating all possible system combinations
+    use_all_combinations: bool = False
     #: SizingOptions object, containing information for decoding and encoding individuals
     options: individual_encoding_no_utsp.SizingOptions = dataclasses.field(
         default_factory=individual_encoding_no_utsp.SizingOptions()
@@ -99,6 +101,7 @@ class BuildingSizerRequest:
             self.population_size,
             self.crossover_probability,
             self.mutation_probability,
+            self.use_all_combinations,
             self.options,
             self.archetype_config_,
             self.requisite_hisim_config_paths,
@@ -385,13 +388,13 @@ def get_results_from_requisite_hisim_configs_slurm(
     make_parallel_slurm_requests(
         job_array_file_path=job_array_file_path,
         slurm_script=slurm_script,
-        global_timeout_minutes=120,
-        job_timeout_minutes=30,
+        global_timeout_minutes=180,
+        job_timeout_minutes=180,
         sleep_time_in_seconds=60,
     )
 
     # Step 4: Load results
-    timeout = 180
+    timeout_in_seconds = 180
     start_time = time.time()
     decoder = json.JSONDecoder()
     while True:
@@ -424,7 +427,7 @@ def get_results_from_requisite_hisim_configs_slurm(
             print(f"File read error: {e}. Retrying...")
 
         time.sleep(10)
-        if time.time() - start_time > timeout:
+        if time.time() - start_time > timeout_in_seconds:
             raise TimeoutError(
                 f"Could not read valid JSON from {result_dict_path} within timeout."
             )
@@ -545,11 +548,12 @@ def building_sizer_iteration(
     except:
         raise ValueError(
             "Something in iteration went wrong. ",
-            parent_individuals,
-            "vs",
-            request.population_size,
-            " Rated individuals ",
-            rated_individuals,
+            "Found ", parent_individuals, " parent individuals"
+            "but requested population size is ",
+            request.population_size,". "
+            "Rated individuals are ",
+            rated_individuals,". "
+            "You might want to check your hisim slurm output files."
         )
 
     # combine combine parents and children
@@ -588,6 +592,7 @@ def main_without_utsp(
     request: BuildingSizerRequest,
     main_building_sizer_request_directory: str,
     hisim_simulation_parameters: SimulationParameters,
+    use_all_combinations: bool = False
 ):
     """One iteration in the building sizer."""
 
@@ -607,11 +612,13 @@ def main_without_utsp(
         )
         initial_hisim_energy_system_configs = (
             individual_encoding_no_utsp.create_random_system_configs(
-                request.population_size, request.options
+                request.population_size, request.options, use_all_combinations=use_all_combinations
             )
         )
         print(
-            f"Created {len(initial_hisim_energy_system_configs)} inital hisim energy system configs based on request."
+            f"Created {len(initial_hisim_energy_system_configs)} inital hisim energy system configs based on request. "
+            f"Initial population size was {request.population_size}. "
+            f"Use_all_combination was set {use_all_combinations} (default is False)."
         )
 
         next_building_sizer_request = trigger_next_iteration(

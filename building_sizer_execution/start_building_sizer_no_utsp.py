@@ -82,7 +82,7 @@ def get_hisim_kpis_of_iteration(
                     dicti = {hisim_config_values_str: kpi_values}
                     hisim_kpis.update(dicti)
 
-    return hisim_kpis, file_path
+    return hisim_kpis
 
 
 def get_rating(kpi_dict: Dict, request: BuildingSizerRequest) -> float:
@@ -202,7 +202,7 @@ def run_one_iteration(
     output_dir,
     sim_params,
     result_file,
-    all_kpis,
+    list_with_all_hisim_kpi_dicts,
     rating_lists,
     iteration_counter: int,
 ):
@@ -212,27 +212,44 @@ def run_one_iteration(
         request=request,
         main_building_sizer_request_directory=output_dir,
         hisim_simulation_parameters=sim_params,
+        use_all_combinations=request.use_all_combinations
     )
     wait_for_result(result_file)
     result = get_result_from_json(result_file)
-    kpis, hisim_result_path = get_hisim_kpis_of_iteration(output_dir)
-    if kpis:
-        all_kpis.append(kpis)
-        rating_lists.append(get_ratings(kpis.values(), request))
-        for config_str, kpi in kpis.items():
+    hisim_kpis_dict = get_hisim_kpis_of_iteration(output_dir)
+    if hisim_kpis_dict:
+        for config_str, kpi_dict in hisim_kpis_dict.items():
+            config_dict = return_config_as_dict(config_str)
+            # check if min indoor air temperature was below 17°C, if so discard simulation result
+            min_threshold_indoor_temperature_in_celsius = 17.0
+            skip_hisim_simulation_result = check_kpis_and_remove_unvalid_simulation_results(hisim_kpis_dict=kpi_dict, min_threshold_indoor_temperature_in_celsius=min_threshold_indoor_temperature_in_celsius)
+            if skip_hisim_simulation_result:
+                print(f"Minimum indoor air temperature was below {min_threshold_indoor_temperature_in_celsius}°C. Skip this simulation result of config {config_str}.")
+                continue
             print(
                 "Config:",
-                return_config_as_dict(config_str),
+                config_dict,
                 "→",
                 request.kpi_for_rating.value,
                 "=",
-                get_rating(kpi, request),
+                get_rating(kpi_dict, request),
             )
             print("---")
+        list_with_all_hisim_kpi_dicts.append(hisim_kpis_dict)
+        rating_lists.append(get_ratings(hisim_kpis_dict.values(), request))
+
     iteration_counter += 1
-    return all_kpis, hisim_result_path, rating_lists, result, iteration_counter
+    return list_with_all_hisim_kpi_dicts, rating_lists, result, iteration_counter
 
+def check_kpis_and_remove_unvalid_simulation_results(hisim_kpis_dict: Dict, min_threshold_indoor_temperature_in_celsius: float):
+    """Check Kpis and remove unvalid simulation results."""
+    # check min indoor temperature (assume set temperature of building indoor temperature was 20°C)
+    skip_hisim_simulation_result: bool = False
+    if hisim_kpis_dict["minimum_indoor_temperature_in_celsius"] < min_threshold_indoor_temperature_in_celsius:
+        skip_hisim_simulation_result = True
+    return skip_hisim_simulation_result
 
+  
 def extract_hisim_config_hash_number(hisim_kpi_filepath: str):
     """Extract hash number from hisim config path."""
     # Get the parent folder name (the "__<hash>" part)
@@ -252,7 +269,6 @@ def create_table_with_all_energy_system_configs_and_hisim_kpis(
     generations: Dict,
     main_building_sizer_request_directory: str,
     request,
-    hisim_result_path: str,
     building_archetype_config_dict: Dict,
     hisim_simulation_parameters: Dict,
 ) -> pd.DataFrame:
@@ -279,10 +295,7 @@ def create_table_with_all_energy_system_configs_and_hisim_kpis(
                 **d_config,
                 **building_archetype_config_dict,
                 **subdict_hisim_parameters,
-                "hisim_config_hash": extract_hisim_config_hash_number(
-                    hisim_kpi_filepath=hisim_result_path
-                ),
-                "hisim_kpi_result_file": hisim_result_path,
+                "hisim_config_filepath": hisim_config_str
             }
             d_outputs = {**kpi_dict}
 
@@ -449,7 +462,7 @@ def plot_ratings_of_each_energy_system_config_as_scatterplot(
 def main(
     building_sizer_config_file: Union[str, BuildingSizerConfig],
     building_sizer_result_folder: Optional[str] = None,
-    remove_hisim_result_folder: bool = True,
+    remove_hisim_result_folder: bool = False,
     make_scatter_plot_of_rating: bool = False
 ):
     """
@@ -517,7 +530,7 @@ def main(
     iterations, all_kpis, rating_lists = [], [], []
     # === First iteration (always run) for initialization ===
     print("\n--- INITIALIZATION ITERATION ---")
-    all_kpis, hisim_result_path, rating_lists, result_obj, iteration_counter = (
+    all_kpis, rating_lists, result_obj, iteration_counter = (
         run_one_iteration(
             initial_building_sizer_request,
             main_building_sizer_request_directory,
@@ -537,7 +550,7 @@ def main(
         previous_hashes.add(request_hash)
         iterations.append(request)
         print("--- OPTIMIZATION ITERATION ---")
-        all_kpis, hisim_result_path, rating_lists, result_obj, iteration_counter = (
+        all_kpis, rating_lists, result_obj, iteration_counter = (
             run_one_iteration(
                 request,
                 main_building_sizer_request_directory,
@@ -559,7 +572,6 @@ def main(
         generations=all_kpis,
         main_building_sizer_request_directory=main_building_sizer_request_directory,
         request=request,
-        hisim_result_path=hisim_result_path,
         building_archetype_config_dict=my_building_archetpye_config,
         hisim_simulation_parameters=my_config.hisim_simulation_parameters,
     )

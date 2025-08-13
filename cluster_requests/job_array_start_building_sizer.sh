@@ -1,9 +1,11 @@
 #!/bin/bash
 #SBATCH --job-name=hisim_building_sizer
+#SBATCH --time=12:00:00
+#SBATCH --cpus-per-task=1
 #SBATCH --ntasks=3
-#SBATCH --cpus-per-task=3
+#SBATCH --mem=13G
 #SBATCH --array=1-3
-#SBATCH --exclude=cn[2-12,16-33,36-41,43-54]
+#SBATCH --exclude=cn[2-14,16-26,28-31,43-45,48-52]
 #SBATCH --output=/fast/home/k-rieck/HiSim-Building-Sizer/cluster_requests/slurm_output_files/out_%A_%a.txt
 #SBATCH --error=/fast/home/k-rieck/HiSim-Building-Sizer/cluster_requests/slurm_output_files/err_%A_%a.txt
 #SBATCH --nice=10

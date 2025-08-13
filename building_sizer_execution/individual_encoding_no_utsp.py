@@ -7,6 +7,7 @@ Classes to gather information needed for the Translator as well as combine infor
 import json
 import sys
 import random
+import itertools
 from dataclasses import dataclass, field
 from typing import List
 
@@ -55,25 +56,6 @@ class SizingOptions:
             "use_battery_and_ems",
         ]
     )
-    # this list defines the probabilites of each component to be included at the beginning
-    #: defines probability of each component to be considered at the initial configurations
-    # probabilities: List[float] = field(default_factory=lambda: [0.8, 0.4])
-
-    # def __post_init__(self):
-    #     """Checks if every element of attribute list bool_attributes and list discrete_attributes
-    #     is also attribute of class EnergySystemConfig."""
-    #     for name in self.bool_attributes + self.discrete_attributes:
-    #         if not hasattr(EnergySystemConfig, name):
-    #             raise Exception(
-    #                 f"Invalid vector attribute: SystemConfig has no member '{name}'"
-    #             )
-    #     for name in self.discrete_attributes:
-    #         if not hasattr(self, name):
-    #             raise Exception(
-    #                 f"Missing list of allowed values: SizingOptions has no member '{name} '"
-    #                 f"specifying allowed values for the attribute of the same name"
-    #             )
-
 
 @dataclass_json
 @dataclass
@@ -121,10 +103,28 @@ class Individual:
         individual.discrete_vector = discrete_vector
         return individual
 
-        # for component in options.discrete_attributes:
-        #     allowed_values = getattr(options, component)
-        #     individual.discrete_vector.append(random.choice(allowed_values))
-        # return individual
+    @staticmethod
+    def create_all_combinations(options: SizingOptions) -> List["Individual"]:
+        """Create all valid individuals by combining all allowed values.
+
+        Enforces: if PV share = 0.0, then battery must be False.
+        """
+        components = options.discrete_attributes
+        allowed_values_lists = [getattr(options, comp) for comp in components]
+
+        all_individuals = []
+        for combo in itertools.product(*allowed_values_lists):
+            combo_dict = dict(zip(components, combo))
+
+            # Skip invalid PV–battery combinations
+            if combo_dict["share_of_maximum_pv_potential"] == 0.0 and combo_dict["use_battery_and_ems"] is True:
+                continue
+
+            ind = Individual()
+            ind.discrete_vector = [combo_dict[comp] for comp in components]
+            all_individuals.append(ind)
+
+        return all_individuals
 
 
 @dataclass_json
@@ -151,9 +151,7 @@ def create_individual_from_config(
     :return: Individual with bool and discrete vector.
     :rtype: Individual
     """
-    # bool_vector: List[bool] = [
-    #     getattr(system_config, name) for name in options.bool_attributes
-    # ]
+
     discrete_vector: List[float] = [
         getattr(system_config, name) for name in options.discrete_attributes
     ]
@@ -177,12 +175,7 @@ def create_config_from_individual(
     """
     # create a default SystemConfig object
     system_config = EnergySystemConfig()
-    # assign the bool attributes
-    # assert len(options.bool_attributes) == len(
-    #     individual.bool_vector
-    # ), "Invalid individual: wrong number of bool parameters"
-    # for i, name in enumerate(options.bool_attributes):
-    #     setattr(system_config, name, individual.bool_vector[i])
+
     # assign the discrete attributes
     assert len(options.discrete_attributes) == len(
         individual.discrete_vector
@@ -193,7 +186,7 @@ def create_config_from_individual(
 
 
 def create_random_system_configs(
-    number: int, options: SizingOptions
+    number: int, options: SizingOptions, use_all_combinations: bool = False
 ) -> List[EnergySystemConfig]:
     """
     Creates the desired number of random individuals (HiSIM system configurations).
@@ -206,12 +199,19 @@ def create_random_system_configs(
     :rtype: hisim_configs: List[SystemConfig]
     """
     hisim_configs = []
-    for _ in range(number):
-        # Create a random Individual
-        individual = Individual.create_random_individual(options)
-        # Convert the Individual to a SystemConfig object and
-        # append it to the list
-        hisim_configs.append(create_config_from_individual(individual, options))
+    # random picking (default)
+    if use_all_combinations is False:
+        for _ in range(number):
+            # Create a random Individual
+            individual = Individual.create_random_individual(options)
+            # Convert the Individual to a SystemConfig object and
+            # append it to the list
+            hisim_configs.append(create_config_from_individual(individual, options))
+    # return all possible combinations
+    else:
+        all_combined_individuals = Individual.create_all_combinations(options=options)
+        for individual in all_combined_individuals:
+            hisim_configs.append(create_config_from_individual(individual, options))
     return hisim_configs
 
 

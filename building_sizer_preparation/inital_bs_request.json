@@ -4,6 +4,7 @@
     "population_size": 220,
     "crossover_probability": 0,
     "mutation_probability": 1,
+    "use_all_combinations": false,
     "options": {
         "share_of_maximum_pv_potential": [
             0.0,
