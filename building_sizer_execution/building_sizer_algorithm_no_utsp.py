@@ -218,10 +218,11 @@ def create_hisim_configs(
                         "Filter out solar thermal systems from heritage protected buildings."
                     )
                     continue
-            if energy_system_config.share_of_maximum_pv_potential != 0.0:
-                print("Filter out PV systems from heritage protected buildings.")
-                energy_system_config.share_of_maximum_pv_potential = 0.0
-                energy_system_config.use_battery_and_ems = False
+                if energy_system_config.share_of_maximum_pv_potential != 0.0:
+                    print("Filter out PV systems from heritage protected buildings.")
+                    energy_system_config.share_of_maximum_pv_potential = 0.0
+                    energy_system_config.use_battery_and_ems = False
+
         hisim_configs.append(
             ModularHouseholdConfig(
                 energy_system_config_=energy_system_config,
