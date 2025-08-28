@@ -42,6 +42,7 @@ class SizingOptions:
         default_factory=lambda: [
             ComponentType.HEAT_DISTRIBUTION_SYSTEM_FLOORHEATING,
             ComponentType.HEAT_DISTRIBUTION_SYSTEM_RADIATOR,
+            ComponentType.NO_HDS,
         ]
     )
     #: list of bools indicating if battery and energy management system (EMS) are included
@@ -56,6 +57,7 @@ class SizingOptions:
             "use_battery_and_ems",
         ]
     )
+
 
 @dataclass_json
 @dataclass
@@ -88,6 +90,15 @@ class Individual:
                 temp_values[component] = pv_share
                 discrete_vector.append(pv_share)
 
+            elif component == "heat_distribution_system":
+                heating_system = temp_values.get("heating_system", 0)
+                if heating_system == "ElectricHeating":
+                    hds_allowed_values = [ComponentType.NO_HDS]
+                else:
+                    hds_allowed_values = getattr(options, component)
+                hds_choice = random.choice(hds_allowed_values)
+                discrete_vector.append(hds_choice)
+
             elif component == "use_battery_and_ems":
                 pv_share = temp_values.get("share_of_maximum_pv_potential", 0)
                 if pv_share == 0.0:
@@ -117,7 +128,21 @@ class Individual:
             combo_dict = dict(zip(components, combo))
 
             # Skip invalid PV–battery combinations
-            if combo_dict["share_of_maximum_pv_potential"] == 0.0 and combo_dict["use_battery_and_ems"] is True:
+            if (
+                combo_dict["share_of_maximum_pv_potential"] == 0.0
+                and combo_dict["use_battery_and_ems"] is True
+            ):
+                continue
+            # Only electric heating has no hds, the others do
+            if (
+                combo_dict["heating_system"] != "ElectricHeating"
+                and combo_dict["heat_distribution_system"] == ComponentType.NO_HDS
+            ):
+                continue
+            if (
+                combo_dict["heating_system"] == "ElectricHeating"
+                and combo_dict["heat_distribution_system"] != ComponentType.NO_HDS
+            ):
                 continue
 
             ind = Individual()

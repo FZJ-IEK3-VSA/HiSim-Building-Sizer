@@ -92,6 +92,8 @@ class BuildingSizerRequest:
     # stores the HiSim requests triggered in earlier iterations
     #: HiSim requests from earlier iterations
     requisite_hisim_config_paths: List[str] = dataclasses.field(default_factory=list)
+    adapt_renovation_standard_to_future_scenario: bool = False
+    heritage_protection_filter: bool = False
 
     def get_hash(self):
         """Generate a hash for BuildingSizerRequest."""
@@ -106,6 +108,8 @@ class BuildingSizerRequest:
             self.archetype_config_,
             self.requisite_hisim_config_paths,
             self.kpi_for_rating,
+            self.adapt_renovation_standard_to_future_scenario,
+            self.heritage_protection_filter,
         )
         config_str = json.dumps(request.to_dict())
         config_str_hash = hash(config_str)
@@ -163,6 +167,7 @@ def create_hisim_configs(
     system_configs: List[EnergySystemConfig],
     request: BuildingSizerRequest,
     main_building_sizer_request_directory: str,
+    hisim_simulation_parameters: SimulationParameters,
 ) -> List[str]:
     """
     Creates and sends one time series request to the utsp for every passed hisim configuration
@@ -177,13 +182,54 @@ def create_hisim_configs(
     """
 
     # Create modular household configs for hisim request
-    hisim_configs = [
-        ModularHouseholdConfig(system_config, request.archetype_config_)
-        for system_config in system_configs
-    ]
+    # hisim_configs = [
+    #     ModularHouseholdConfig(system_config, request.archetype_config_)
+    #     for system_config in system_configs
+    # ]
+
+    hisim_configs: List[ModularHouseholdConfig] = []
+    for energy_system_config in system_configs:
+        simulation_year = hisim_simulation_parameters.start_date.year
+        if (
+            request.adapt_renovation_standard_to_future_scenario
+            and simulation_year == 2050
+        ):
+            # turn all unrenovated buildings to renovated except heritage protected buildings (<1900) for the future scenario
+            if (
+                request.archetype_config_.construction_year > 1900
+                and "001.001" in request.archetype_config_.building_code
+            ):
+                request.archetype_config_.building_code = (
+                    request.archetype_config_.building_code.replace(
+                        "001.001", "001.002"
+                    )
+                )
+                print(
+                    "Make sure that all unrenovated buildings becomde renovated in year 2050 (except heritage protected buildings)."
+                )
+        if request.heritage_protection_filter:
+            # if the builings is older than 1900 (assume that in this case it's heritage protected) -> no heatpump, no solarthermal system, no PV allowed for esthetic reasons
+            if int(request.archetype_config_.construction_year) <= 1900:
+                if energy_system_config.heating_system in [
+                    "HeatPumpSolarThermal",
+                    "GasSolarthermal",
+                ]:
+                    print(
+                        "Filter out solar thermal systems from heritage protected buildings."
+                    )
+                    continue
+            if energy_system_config.share_of_maximum_pv_potential != 0.0:
+                print("Filter out PV systems from heritage protected buildings.")
+                energy_system_config.share_of_maximum_pv_potential = 0.0
+                energy_system_config.use_battery_and_ems = False
+        hisim_configs.append(
+            ModularHouseholdConfig(
+                energy_system_config_=energy_system_config,
+                archetype_config_=request.archetype_config_,
+            )
+        )
 
     hisim_config_paths: List[str] = []
-
     # save configs in folder
     for config in hisim_configs:
         # get hash for each config
@@ -199,6 +245,9 @@ def create_hisim_configs(
         with open(filename, "w", encoding="utf-8") as config_file:
             json.dump(config.to_dict(), config_file, indent=4)
 
+    print(
+        f"From {len(system_configs)} system configs, {len(hisim_config_paths)} HiSIM configs created."
+    )
     return hisim_config_paths
 
 
@@ -437,6 +486,7 @@ def trigger_next_iteration(
     request: BuildingSizerRequest,
     hisim_configs: List[EnergySystemConfig],
     main_building_sizer_request_directory: str,
+    hisim_simulation_parameters: SimulationParameters,
 ) -> BuildingSizerRequest:
     """
     Sends the specified HiSim requests to the UTSP, and afterwards sends the request for the next building sizer iteration.
@@ -448,7 +498,10 @@ def trigger_next_iteration(
     """
     # Send the new requests to the UTSP
     hisim_config_paths = create_hisim_configs(
-        hisim_configs, request, main_building_sizer_request_directory
+        hisim_configs,
+        request,
+        main_building_sizer_request_directory,
+        hisim_simulation_parameters=hisim_simulation_parameters,
     )
     # Send a new building_sizer request to trigger the next building sizer iteration. This must be done after sending the
     # requisite hisim requests to guarantee that the UTSP will not be blocked.
@@ -548,12 +601,13 @@ def building_sizer_iteration(
     except:
         raise ValueError(
             "Something in iteration went wrong. ",
-            "Found ", parent_individuals, " parent individuals"
-            "but requested population size is ",
-            request.population_size,". "
-            "Rated individuals are ",
-            rated_individuals,". "
-            "You might want to check your hisim slurm output files."
+            "Found ",
+            parent_individuals,
+            " parent individuals" "but requested population size is ",
+            request.population_size,
+            ". " "Rated individuals are ",
+            rated_individuals,
+            ". " "You might want to check your hisim slurm output files.",
         )
 
     # combine combine parents and children
@@ -579,7 +633,10 @@ def building_sizer_iteration(
 
     # trigger the next iteration with the new hisim configurations
     next_building_sizer_request = trigger_next_iteration(
-        request, hisim_configs, main_building_sizer_request_directory
+        request=request,
+        hisim_configs=hisim_configs,
+        main_building_sizer_request_directory=main_building_sizer_request_directory,
+        hisim_simulation_parameters=hisim_simulation_parameters,
     )
     # return the building sizer request for the next iteration, and the result of this iteration
     return (
@@ -592,7 +649,7 @@ def main_without_utsp(
     request: BuildingSizerRequest,
     main_building_sizer_request_directory: str,
     hisim_simulation_parameters: SimulationParameters,
-    use_all_combinations: bool = False
+    use_all_combinations: bool = False,
 ):
     """One iteration in the building sizer."""
 
@@ -612,7 +669,9 @@ def main_without_utsp(
         )
         initial_hisim_energy_system_configs = (
             individual_encoding_no_utsp.create_random_system_configs(
-                request.population_size, request.options, use_all_combinations=use_all_combinations
+                request.population_size,
+                request.options,
+                use_all_combinations=use_all_combinations,
             )
         )
         print(
@@ -622,9 +681,10 @@ def main_without_utsp(
         )
 
         next_building_sizer_request = trigger_next_iteration(
-            request,
-            initial_hisim_energy_system_configs,
-            main_building_sizer_request_directory,
+            request=request,
+            hisim_configs=initial_hisim_energy_system_configs,
+            main_building_sizer_request_directory=main_building_sizer_request_directory,
+            hisim_simulation_parameters=hisim_simulation_parameters,
         )
         remaining_iterations_message = "My first iteration result"
 

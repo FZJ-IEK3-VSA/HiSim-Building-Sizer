@@ -7,6 +7,7 @@
 #SBATCH --array=1
 #SBATCH --output=/fast/home/k-rieck/HiSim-Building-Sizer/cluster_requests/slurm_output_files/out_simu_%A_%a.txt
 #SBATCH --error=/fast/home/k-rieck/HiSim-Building-Sizer/cluster_requests/slurm_output_files/err_simu_%A_%a.txt
+#SBATCH --exclude=cn[1-3,5-12,15-21,24-27,29-31,36-53]
 #SBATCH --nice=10
 
 # Input parameters from Python script

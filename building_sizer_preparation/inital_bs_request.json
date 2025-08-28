@@ -39,5 +39,7 @@
     },
     "kpi_for_rating": "Annualized Total Costs [\u20ac]",
     "archetype_config_": null,
-    "requisite_hisim_config_paths": []
+    "requisite_hisim_config_paths": [],
+    "adapt_renovation_standard_to_future_scenario": true,
+    "heritage_protection_filter": true
 }

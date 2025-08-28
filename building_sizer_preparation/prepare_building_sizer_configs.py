@@ -241,6 +241,7 @@ def main_with_inital_request_as_json(
         with open(path_to_inital_bs_request, "r") as f:
             print("Read inital bs request from ", path_to_inital_bs_request)
             json_data_request = f.read()
+            print("json data request", json_data_request)
         # Parse into a dataclass object
         initial_building_sizer_request = BuildingSizerRequest.from_json(
             json_data_request
@@ -267,5 +268,5 @@ def main_with_inital_request_as_json(
 
 
 if __name__ == "__main__":
-    PATH_TO_HISIM_ARCHETYPE_CONFIGS = "/fast/home/k-rieck/jobs_hisim/cluster-hisim-paper/job_array_for_hisim_mass_simus/hisim_config_collection/builda_samples_20250710_1054"
+    PATH_TO_HISIM_ARCHETYPE_CONFIGS = "/fast/central/projects/2022-k-rieck-phd/paper_2_clustering_german_building_stock/hisim_building_clustering_analysis/E_building_clustering_postprocessing/13_filtered/hisim_config_collection"
     main(path_to_archetype_config_collection=PATH_TO_HISIM_ARCHETYPE_CONFIGS)
