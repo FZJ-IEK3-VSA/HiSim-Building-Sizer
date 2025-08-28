@@ -615,6 +615,7 @@ class BuildingSizerPostprocessor:
             # fliersize=2,
             linewidth=1,
             color="lightblue",
+            order=list(sorted(energy_system_map.values())),  # order by your mapping keys
         )
         x_tick_labels = list(sorted(energy_system_map.values()))
         x_tick_positions = range(len(x_tick_labels))
@@ -707,7 +708,7 @@ class BuildingSizerPostprocessor:
 
 # ---------- Run It ----------
 if __name__ == "__main__":
-    year = "2050"
+    year = "2024"
     config_year_request_path_string = (
         f"F_hisim_building_sizer_optimization/0/{year}/bs_requests_20250825_1706"
     )
