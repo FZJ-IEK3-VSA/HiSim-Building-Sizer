@@ -5,7 +5,7 @@
 #SBATCH --ntasks=3
 #SBATCH --mem=13G
 #SBATCH --array=1-3
-#SBATCH --exclude=cn[1-3,5-12,15-21,24-27,29-31,36-53]
+#SBATCH --exclude=cn[1-31,34,37,41-45,48-52]
 #SBATCH --output=/fast/home/k-rieck/HiSim-Building-Sizer/cluster_requests/slurm_output_files/out_%A_%a.txt
 #SBATCH --error=/fast/home/k-rieck/HiSim-Building-Sizer/cluster_requests/slurm_output_files/err_%A_%a.txt
 #SBATCH --nice=10
