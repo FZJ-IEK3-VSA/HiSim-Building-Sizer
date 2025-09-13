@@ -242,9 +242,9 @@ class BuildingSizerPostprocessor:
         self.year = year
 
         # find kpi winner among the bs results
-        # self.find_kpi_winners_for_all_buildings(kpi_columns=columns_of_interest)
+        self.find_kpi_winners_for_all_buildings(kpi_columns=columns_of_interest)
         # collect bs results, sort according to building types and make plots
-        self.collect_all_bs_results_and_plot(kpi_columns=columns_of_interest)
+        self.collect_all_bs_results_and_plot(kpi_columns=columns_of_interest, resume_all_bs_results_in_excel=False)
 
     def go_through_input_folder_and_find_all_building_sizer_results(
         self, file_name: str = "building_sizer_results.csv"
@@ -380,15 +380,16 @@ class BuildingSizerPostprocessor:
         self,
         kpi_columns: List[PrettyKpiLabels],
         filename: str = "building_sizer_results.csv",
+        resume_all_bs_results_in_excel: bool = False
     ):
         files = self.go_through_input_folder_and_find_all_building_sizer_results(
             filename
         )
         for kpi_column in kpi_columns:
             df_collected = self.collect_building_sizer_results(
-                files=files, kpi_column=kpi_column
+                files=files, kpi_column=kpi_column, resume_all_bs_results_in_excel=resume_all_bs_results_in_excel
             )
-            # self.filter_by_building_type(df=df_collected, kpi_column=kpi_column)
+            self.filter_by_building_type(df=df_collected, kpi_column=kpi_column)
             self.filter_by_age(df=df_collected, kpi_column=kpi_column)
 
     def filter_by_building_type(
@@ -601,11 +602,14 @@ class BuildingSizerPostprocessor:
         df, kpi_column, sorted_hues = self._prepare_plot_data(
             df=df, kpi_column=kpi_column, hue_column=hue_column
         )
+
         # Define the full desired order
         desired_order = list(energy_system_map_new.values())
 
         # Map original column to short names
         df['energy_system_sort'] = df[("Input", "energy_system_combination")].map(energy_system_map_new)
+        df = df[~df['energy_system_sort'].astype(str).str.endswith("PV1", na=False)]
+        
 
         # Keep only those categories that exist in the DataFrame
         present_categories = [c for c in desired_order if c in df['energy_system_sort'].unique()]
@@ -660,7 +664,7 @@ class BuildingSizerPostprocessor:
             x='energy_system_sort', # energy_system_column,
             y=kpi_column.multiindex_output_column,
             hue=hue_column,
-            s=50,# if num_hues <= 10 else 10,
+            s=80,# if num_hues <= 10 else 10,
             ax=ax,
             legend=False if num_hues > 10 else "full",  # hide legend if > 10 hues
             palette=palette,
@@ -668,8 +672,8 @@ class BuildingSizerPostprocessor:
         ax.set_xlabel("")   # remove x-axis label
 
         # Make dotted vertical line after each Nth category
-        for index, xi in enumerate(present_categories):
-            if index % 3 == 0:  # adjust N as needed
+        for index, xi in enumerate(df["energy_system_sort"].cat.categories):
+            if index % 2 == 0:  # adjust N as needed
                 ax.axvline(x=xi, color="gray", linestyle=":")
 
         # Find min and max y values
@@ -708,7 +712,8 @@ class BuildingSizerPostprocessor:
             fontsize=self.hisim_chartbase.fontsize_legend,
         )
         plt.tick_params(labelsize=self.hisim_chartbase.fontsize_ticks)
-        ax.tick_params(axis='x', rotation=45, labelsize=10) # self.hisim_chartbase.fontsize_ticks,
+        ax.set_xticks(range(len(present_categories)))
+        ax.set_xticklabels(present_categories, rotation=45, ha="right", fontsize=10)
 
         # Save figure
         filepath = (
@@ -776,7 +781,7 @@ class BuildingSizerPostprocessor:
         rows_to_drop = []
         for idx, row in df.iterrows():
             label = "".join(str(row[col]) for col in label_cols if col in df.columns)
-            if label == "PV1":
+            if label == "PV0":
                 rows_to_drop.append(idx)
 
         df = df.drop(rows_to_drop)
@@ -973,12 +978,13 @@ class BuildingSizerPostprocessor:
 
         # --- Fix x-ticks (only present categories) ---
         plt.tick_params(labelsize=self.hisim_chartbase.fontsize_ticks)
-        ax.tick_params(axis='x', rotation=45, labelsize=10) # self.hisim_chartbase.fontsize_ticks,
+        ax.set_xticks(range(len(present_categories)))
+        ax.set_xticklabels(present_categories, rotation=45, ha="right", fontsize=10)
 
         # Save figure
         plot_file = (
             output_dir
-            / f"{kpi_column.kpi_column}_boxplot_per_energy_system_{building_type}.png"
+            / f"{kpi_column.kpi_column}_boxplot_per_energy_system_{building_type}_PV_comparison.png"
         )
         # plt.tight_layout()
         plt.savefig(plot_file, dpi=self.hisim_chartbase.dpi, bbox_inches="tight")
@@ -1032,7 +1038,7 @@ class BuildingSizerPostprocessor:
         return df_subset
 
     def collect_building_sizer_results(
-        self, files: List[Path], kpi_column: PrettyKpiLabels
+        self, files: List[Path], kpi_column: PrettyKpiLabels, resume_all_bs_results_in_excel: bool
     ):
         collected_dfs = []
         for file_path in files:
@@ -1055,33 +1061,60 @@ class BuildingSizerPostprocessor:
         df_collected = pd.concat(collected_dfs, axis=0)
         # remove duplicates
         df_collected = self.remove_duplicates_from_df(df_collected)
+
+        # save all as excel if wanted
+        if resume_all_bs_results_in_excel:
+            with pd.ExcelWriter(self.output_folder / f"all_bs_results_{self.year}.xlsx", engine="openpyxl") as writer:
+                used_names = set()
+                for file_path in files:
+                    # read each building sizer result
+                    df = self.read_building_sizer_results(file_path=file_path)
+                    building_id = df[("Input", "building_id")].iloc[0]
+
+                    # drop duplicates (keep first occurrence by default)
+                    df = df.drop_duplicates()
+                    df.columns = df.columns.get_level_values(-1)  # keep only last level
+
+                    # ensure sheet name length ≤ 31 chars and unique
+                    sheet_name = building_id[:31]  # Excel sheet name limit
+
+                    # skip duplicates
+                    if sheet_name in used_names:
+                        print(f"Skipping duplicate sheet: {sheet_name}")
+                        continue
+
+                    used_names.add(sheet_name)
+
+                    # write to Excel
+                    df.to_excel(writer, sheet_name=sheet_name, index=False)
+
         return df_collected
 
 
 # ---------- Run It ----------
 if __name__ == "__main__":
-    # year = "2024"
-    # config_year_request_path_string = (
-    #     f"F_hisim_building_sizer_optimization/0/{year}/bs_requests_20250910_1226"
-    # )
-    # INPUT_FOLDER = Path(
-    #     "/fast/home/k-rieck/hisim_building_clustering/test_results/test_building_types/"
-    #     + config_year_request_path_string
-    # )
-    # OUTPUT_FOLDER = (
-    #     Path(
-    #         "/fast/home/k-rieck/Thesis_2022-2025/Results/Sensitivity_Analysis_12_Building_Types/"
-    #         + config_year_request_path_string
-    #     )
-    #     # / "worst"
-    # )
-    samples_all_tries = "F_hisim_building_sizer_optimization/16_new/samples_all/2050/20250910"
-    # samples_hundred = "F_hisim_building_sizer_optimization/16_new/samples_100/2050/bs_requests_20250831_2309"
-    # samples_thousand = "F_hisim_building_sizer_optimization/16_new/samples_1000/2050/" # 20250831"
-    year = "2050"
-    INPUT_FOLDER = Path("/fast/central/projects/2022-k-rieck-phd/paper_2_clustering_german_building_stock/hisim_building_clustering_analysis/") / samples_all_tries
-    OUTPUT_FOLDER = Path(
-        "/fast/home/k-rieck/Thesis_2022-2025/Results/Clustering_Sachsen_Config_16/") / samples_all_tries # / "worst"
+    year = "2024"
+    config_year_request_path_string = (
+        f"F_hisim_building_sizer_optimization/0/{year}/bs_requests_20250910_1226"
+    )
+    INPUT_FOLDER = Path(
+        "/fast/home/k-rieck/hisim_building_clustering/test_results/test_building_types/"
+        + config_year_request_path_string
+    )
+    OUTPUT_FOLDER = (
+        Path(
+            "/fast/home/k-rieck/Thesis_2022-2025/Results/Sensitivity_Analysis_12_Building_Types/"
+            + config_year_request_path_string
+        )
+        # / "worst"
+    )
+    # samples_all_tries = "F_hisim_building_sizer_optimization/16_new/samples_all/2050/20250910"
+    # # samples_hundred = "F_hisim_building_sizer_optimization/16_new/samples_100/2050/bs_requests_20250831_2309"
+    # # samples_thousand = "F_hisim_building_sizer_optimization/16_new/samples_1000/2050/" # 20250831"
+    # year = "2050"
+    # INPUT_FOLDER = Path("/fast/central/projects/2022-k-rieck-phd/paper_2_clustering_german_building_stock/hisim_building_clustering_analysis/") / samples_all_tries
+    # OUTPUT_FOLDER = Path(
+    #     "/fast/home/k-rieck/Thesis_2022-2025/Results/Clustering_Sachsen_Config_16/") / samples_all_tries # / "worst"
     # -------------------------------------------------------------------------------
     # Find min values
     FIND_MIN_OR_MAX = "min"
