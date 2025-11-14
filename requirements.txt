@@ -1,5 +1,5 @@
 dataclasses_json
+dataclass_wizard
 pandas
 matplotlib
 utspclient
-hisim

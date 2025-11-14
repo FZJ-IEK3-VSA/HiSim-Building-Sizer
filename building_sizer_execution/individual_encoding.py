@@ -1,4 +1,4 @@
-""" 
+"""
 Translation of HiSIM system configurations to boolean and discrete vectors, which can be treated by the evolutionary algorithms, and back.
 Classes to gather information needed for the Translator as well as combine informations describing individuals.
 (HiSIM system config, boolean and discrete vectors as well as fitness or rating)
@@ -14,14 +14,13 @@ from hisim.modular_household.interface_configs.system_config import SystemConfig
 
 
 class BuildingSizerException(Exception):
-
     """Exception for errors in the Building Sizer."""
 
 
 @dataclass_json
 @dataclass
 class SizingOptions:
-    """Contains all relevant information to encode and decode system configs. """
+    """Contains all relevant information to encode and decode system configs."""
 
     #: list of all sizes of PV panels considered in the optimization given in Wp
     pv_peak_power: List[float] = field(
@@ -51,12 +50,12 @@ class SizingOptions:
         is also attribute of class SystemConfig."""
         for name in self.bool_attributes + self.discrete_attributes:
             if not hasattr(SystemConfig, name):
-                raise Exception(
+                raise AttributeError(
                     f"Invalid vector attribute: SystemConfig has no member '{name}'"
                 )
         for name in self.discrete_attributes:
             if not hasattr(self, name):
-                raise Exception(
+                raise AttributeError(
                     f"Missing list of allowed values: SizingOptions has no member '{name} '"
                     f"specifying allowed values for the attribute of the same name"
                 )
@@ -65,8 +64,8 @@ class SizingOptions:
 @dataclass_json
 @dataclass
 class Individual:
+    """System config as numerical vectors."""
 
-    """System config as numerical vectors. """
     #: encoding of the individual (HiSIM configuration) of the boolean part - each digit decides if related technology is included or not
     bool_vector: List[bool] = field(default_factory=list)
     #: encoding of the individual (HiSIM configuration) of the discrete part - each digit describes the size of the considered technology
@@ -101,7 +100,6 @@ class Individual:
 @dataclass_json
 @dataclass
 class RatedIndividual:
-
     """System config as numerical vectors with associated fitness function value."""
 
     #: the individual object, containing a system config encoded as numerical vectors

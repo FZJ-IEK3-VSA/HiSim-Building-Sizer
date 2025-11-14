@@ -1,0 +1,19 @@
+{
+    "startDate": "2021-01-01T00:00:00",
+    "endDate": "2022-01-01T00:00:00",
+    "secondsPerTimestep": 900,
+    "postProcessingOptions": [
+        21,
+        18,
+        19,
+        20,
+        25,
+        24
+    ],
+    "loggingLevel": 3,
+    "resultDirectory": "",
+    "skipFinishedResults": false,
+    "surplusControl": true,
+    "cacheDirPath": "/fast/home/k-rieck/miniforge3/envs/building_sizer/lib/python3.10/site-packages/hisim/inputs/cache",
+    "multipleBuildings": false
+}

@@ -1,0 +1,20 @@
+#!/bin/bash
+#SBATCH --job-name=hisim_building_sizer
+#SBATCH --time=12:00:00
+#SBATCH --cpus-per-task=1
+#SBATCH --ntasks=3
+#SBATCH --mem=13G
+#SBATCH --array=1-3
+#SBATCH --exclude=cn[1-31,34,37,41-45,48-52]
+#SBATCH --output=/fast/home/k-rieck/HiSim-Building-Sizer/cluster_requests/slurm_output_files/out_%A_%a.txt
+#SBATCH --error=/fast/home/k-rieck/HiSim-Building-Sizer/cluster_requests/slurm_output_files/err_%A_%a.txt
+#SBATCH --nice=10
+
+# Specify the path to the config file
+config=/fast/home/k-rieck/HiSim-Building-Sizer/building_sizer_preparation/bs_job_arrays_for_testing/bs_job_array_20241001-1027.csv
+
+# Extract the config path for the current $SLURM_ARRAY_TASK_ID
+bs_config_path=$(awk -F',' -v ArrayTaskID=$SLURM_ARRAY_TASK_ID '$1==ArrayTaskID {print $2}' $config)
+
+# Run python in HiSim-Building-Sizer/building_sizer_execution: sbatch /fast/home/k-rieck/HiSim-Building-Sizer/cluster_requests/job_array_start_building_sizer.sh
+python start_building_sizer_no_utsp.py ${bs_config_path}

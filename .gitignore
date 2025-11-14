@@ -130,3 +130,13 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+/building_sizer_results/bs_request*
+/building_sizer_execution/*.txt
+/building_sizer_execution/*.prof
+/building_sizer_preparation/bs_configs/
+/building_sizer_preparation/bs_configs_for_testing/
+/building_sizer_preparation/bs_job_arrays/
+/building_sizer_preparation/bs_job_arrays_for_testing/
+
+/cluster_requests/slurm_output_files

@@ -1,16 +1,17 @@
-""" 
-Evolutionary algorithms evaluate the fitness of various individuals of a population - and inspired by biology - combine them randomly to a new generation.  The fitter the individuals the better the chance to propagate.
-In this context an individual would be a specified building configurations for HiSIM calls and the new generation is built by combination and variation of parameters in the building configuration.
-This file incoporates one step of the evolutionary algorithm creating a new population based on a rated one. In addition, the file includes all necesary functions for the evaluation step: mutation, crossover, selection,... .
+"""
+Evolutionary algorithms evaluate the fitness of various individuals of a population - and inspired by biology - combine them randomly to a new generation.
+The fitter the individuals the better the chance to propagate.
+In this context an individual would be a specified building configurations for HiSIM calls
+and the new generation is built by combination and variation of parameters in the building configuration.
+This file incoporates one step of the evolutionary algorithm creating a new population based on a rated one.
+In addition, the file includes all necesary functions for the evaluation step: mutation, crossover, selection,... .
 """
 
 # -*- coding: utf-8 -*-
-from hisim.modular_household.interface_configs import system_config  # type: ignore
-
 from typing import List, Tuple
 import random
 
-from building_sizer import individual_encoding
+from building_sizer_execution import individual_encoding
 
 
 def unique(
@@ -23,7 +24,7 @@ def unique(
     :type rated_individuals: List[individual_encoding.RatedIndividual]
     :param population_size: amount of individuals to be selected
     :tpye population_size: int
-    :return: shortened list of individuals (HiSIM configurations) and KPIs (HiSIM results) 
+    :return: shortened list of individuals (HiSIM configurations) and KPIs (HiSIM results)
     :rtype: List[individual_encoding.RatedIndividual]
 
     """
@@ -74,16 +75,16 @@ def complete_population(
 ) -> List[individual_encoding.Individual]:
     """
     Adds random individuals to population, if the population size is too small.
-    
+
     :param original_parents: list of individuals of original population
     :type original_parents: List[individual_encoding.Individual]
     :param population_size: number of individuals the population should finally contain
     :type population_size: int
     :param options: contains all available options for the sizing of each component.
     :type options: individual_encoding.SizingOptions:
-    
+
     :return: list of individuals of the completed population
-    :rtype: completed_population: List[individual_encoding.Individual]        
+    :rtype: completed_population: List[individual_encoding.Individual]
     """
     len_parents = len(original_parents)
     for _ in range(population_size - len_parents):
@@ -98,7 +99,8 @@ def crossover_conventional(
     parent1: individual_encoding.Individual, parent2: individual_encoding.Individual
 ) -> Tuple[individual_encoding.Individual, individual_encoding.Individual]:
     """
-    Combines two individuals (parents) to two new individuals (children). This is done by randomly generating an index and exchanging parts of the bitstrings, which describe individuals.
+    Combines two individuals (parents) to two new individuals (children).
+    This is done by randomly generating an index and exchanging parts of the bitstrings, which describe individuals.
 
     :param parent1: encoding of first parent used for cross over
     :type parent1: individual_encoding.RatedIndividual
@@ -200,7 +202,8 @@ def evolution(
     options: individual_encoding.SizingOptions,
 ) -> List[individual_encoding.Individual]:
     """
-    One step of the evolutionary algorithm (evolution) not including the selection process. Random numbers are generated to decide if cross over, mutation or nothing is considered for the creation of a new generation.
+    One step of the evolutionary algorithm (evolution) not including the selection process.
+    Random numbers are generated to decide if cross over, mutation or nothing is considered for the creation of a new generation.
 
     :param parents:  list of rated individuals
     :type parents: List[individual_encoding.RatedIndividual]
@@ -250,7 +253,7 @@ def evolution(
             elif mode == "discrete":
                 child = mutation_discrete(parent=parent, options=options)
             else:
-                raise Exception(
+                raise ValueError(
                     "variable for mode is not defined, choose either discrete or bool."
                 )
             children.append(child)

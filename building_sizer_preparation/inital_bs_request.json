@@ -1,0 +1,45 @@
+{
+    "remaining_iterations": 1,
+    "discrete_iterations": 1,
+    "population_size": 220,
+    "crossover_probability": 0,
+    "mutation_probability": 1,
+    "use_all_combinations": false,
+    "options": {
+        "share_of_maximum_pv_potential": [
+            0.0,
+            0.2,
+            0.4,
+            0.6,
+            0.8,
+            1.0
+        ],
+        "heating_system": [
+            "HeatPump",
+            "GasHeating",
+            "DistrictHeating",
+            "PelletHeating",
+            "OilHeating",
+            "HydrogenHeating",
+            "ElectricHeating",
+            "GasSolarThermal",
+            "HeatPumpSolarThermal"
+        ],
+        "heat_distribution_system": [
+            "Floorheating",
+            "Conventional Radiator"
+        ],
+        "use_battery_and_ems": [true, false],
+        "discrete_attributes": [
+            "share_of_maximum_pv_potential",
+            "heating_system",
+            "heat_distribution_system",
+            "use_battery_and_ems"
+        ]
+    },
+    "kpi_for_rating": "Annualized Total Costs [\u20ac]",
+    "archetype_config_": null,
+    "requisite_hisim_config_paths": [],
+    "adapt_renovation_standard_to_future_scenario": true,
+    "heritage_protection_filter": true
+}
