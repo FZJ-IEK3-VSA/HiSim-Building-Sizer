@@ -130,7 +130,7 @@ heating_system_map = {
     "DistrictHeating": 6,
     "ElectricHeating": 7,
     "HeatPump": 8,
-    "HeatPumpSolarThermal": 9, 
+    "HeatPumpSolarThermal": 9,
 }
 heating_system_map_new = {
     "OilHeating-R": 1,
@@ -152,19 +152,10 @@ heating_system_map_new = {
     "HeatPumpSolarThermal-F": 17,
 }
 
-hds_map = {
-    "Floorheating": "F",
-    "Conventional Radiator": "R",
-    "No HDS": ""
-}
-pv_map = {
-    1.0: "PV1",
-    0.0: "PV0"
-}
-batt_ems_map = {
-    True: "B",
-    False: ""
-}
+hds_map = {"Floorheating": "F", "Conventional Radiator": "R", "No HDS": ""}
+pv_map = {1.0: "PV1", 0.0: "PV0"}
+batt_ems_map = {True: "B", False: ""}
+
 
 @dataclass
 class PrettyKpiLabels:
@@ -244,11 +235,14 @@ class BuildingSizerPostprocessor:
         # find kpi winner among the bs results
         self.find_kpi_winners_for_all_buildings(kpi_columns=columns_of_interest)
         # collect bs results, sort according to building types and make plots
-        self.collect_all_bs_results_and_plot(kpi_columns=columns_of_interest, resume_all_bs_results_in_excel=False)
+        self.collect_all_bs_results_and_plot(
+            kpi_columns=columns_of_interest, resume_all_bs_results_in_excel=False
+        )
 
     def go_through_input_folder_and_find_all_building_sizer_results(
         self, file_name: str = "building_sizer_results.csv"
     ):
+        print("Go through buildig sizer result folder.")
         bs_result_csv_files = list(self.input_folder.rglob(file_name))
         if not bs_result_csv_files:
             raise ValueError(
@@ -325,13 +319,18 @@ class BuildingSizerPostprocessor:
         before = len(df)
         # check duplicates based on ("Input", "building_id")
         # reset index so index column does not interfere
-        dup_mask = df.duplicated(subset=[("Input", "building_id"), ("Input", "energy_system_combination")], keep=False)
+        dup_mask = df.duplicated(
+            subset=[("Input", "building_id"), ("Input", "energy_system_combination")],
+            keep=False,
+        )
         duplicates = df[dup_mask]
 
         print(f"Found {duplicates.shape[0]} duplicate rows.")
 
         # remove duplicates (keep first occurrence)
-        df = df.drop_duplicates(subset=[("Input", "building_id"), ("Input", "energy_system_combination")])
+        df = df.drop_duplicates(
+            subset=[("Input", "building_id"), ("Input", "energy_system_combination")]
+        )
         after = len(df)
         print(f"Removed {before - after} duplicate rows.")
         return df
@@ -380,15 +379,28 @@ class BuildingSizerPostprocessor:
         self,
         kpi_columns: List[PrettyKpiLabels],
         filename: str = "building_sizer_results.csv",
-        resume_all_bs_results_in_excel: bool = False
+        resume_all_bs_results_in_excel: bool = False,
     ):
         files = self.go_through_input_folder_and_find_all_building_sizer_results(
             filename
         )
         for kpi_column in kpi_columns:
             df_collected = self.collect_building_sizer_results(
-                files=files, kpi_column=kpi_column, resume_all_bs_results_in_excel=resume_all_bs_results_in_excel
+                files=files,
+                kpi_column=kpi_column,
+                resume_all_bs_results_in_excel=resume_all_bs_results_in_excel,
             )
+            # filter out heatpump+floorheating for unrefurbsihed buildings
+            # Filter out heat pump + floorheating for unrefurbished buildings
+            mask = ~(
+                df_collected[("Input", "building_code")].str.contains("001.001")
+                & df_collected[("Input", "heating_system")].str.contains("HeatPump")
+                & df_collected[("Input", "heat_distribution_system")].str.contains(
+                    "Floorheating"
+                )
+            )
+            df_collected = df_collected[mask].copy()
+
             self.filter_by_building_type(df=df_collected, kpi_column=kpi_column)
             self.filter_by_age(df=df_collected, kpi_column=kpi_column)
 
@@ -440,7 +452,7 @@ class BuildingSizerPostprocessor:
             #     building_type=b_type,
             #     hue_column=hue_column,
             #     energy_system_column=("Input", "heating_system_hds"),
-                
+
             # )
 
     def filter_by_age(
@@ -461,21 +473,21 @@ class BuildingSizerPostprocessor:
             elif "after" in age_group:
                 filtered_df = df[df[building_code_column] > year]
             # Add new column with numeric mapping
-            filtered_df.loc[:, ("Input", "energy_system_id")] = filtered_df[energy_system_column].map(
-                energy_system_map
-            )
-            filtered_df.loc[:, ("Input", "energy_system_id_str")] = filtered_df[energy_system_column].map(
-                energy_system_map_new
-            )
-            filtered_df.loc[:, ("Input", "hds_id")] = filtered_df[("Input", "heat_distribution_system")].map(
-                hds_map
-            )
-            filtered_df.loc[:, ("Input", "pv_id")] = filtered_df[("Input", "share_of_maximum_pv_potential")].map(
-                pv_map
-            )
-            filtered_df.loc[:, ("Input", "batt_ems_id")] = filtered_df[("Input", "use_battery_and_ems")].map(
-                batt_ems_map
-            )
+            filtered_df.loc[:, ("Input", "energy_system_id")] = filtered_df[
+                energy_system_column
+            ].map(energy_system_map)
+            filtered_df.loc[:, ("Input", "energy_system_id_str")] = filtered_df[
+                energy_system_column
+            ].map(energy_system_map_new)
+            filtered_df.loc[:, ("Input", "hds_id")] = filtered_df[
+                ("Input", "heat_distribution_system")
+            ].map(hds_map)
+            filtered_df.loc[:, ("Input", "pv_id")] = filtered_df[
+                ("Input", "share_of_maximum_pv_potential")
+            ].map(pv_map)
+            filtered_df.loc[:, ("Input", "batt_ems_id")] = filtered_df[
+                ("Input", "use_battery_and_ems")
+            ].map(batt_ems_map)
             filtered_df.to_csv(
                 age_folder / f"filtered_df_{age_group}_{kpi_column.kpi_column}.csv",
                 index=False,
@@ -557,13 +569,17 @@ class BuildingSizerPostprocessor:
         df.loc[:, ("Input", "hds_id")] = df[("Input", "heat_distribution_system")].map(
             hds_map
         )
-        df.loc[:, ("Input", "pv_id")] = df[("Input", "share_of_maximum_pv_potential")].map(
-            pv_map
-        )
+        df.loc[:, ("Input", "pv_id")] = df[
+            ("Input", "share_of_maximum_pv_potential")
+        ].map(pv_map)
         df.loc[:, ("Input", "batt_ems_id")] = df[("Input", "use_battery_and_ems")].map(
             batt_ems_map
         )
-        df[("Input", "heating_system_hds")] = df[("Input", "heating_system")].astype(str) + "-" + df[("Input", "hds_id")].astype(str)
+        df[("Input", "heating_system_hds")] = (
+            df[("Input", "heating_system")].astype(str)
+            + "-"
+            + df[("Input", "hds_id")].astype(str)
+        )
         ref_systems = set(
             df[df[("Input", "building_code")].str.contains(reference_house)][
                 ("Input", "energy_system_combination")
@@ -607,12 +623,15 @@ class BuildingSizerPostprocessor:
         desired_order = list(energy_system_map_new.values())
 
         # Map original column to short names
-        df['energy_system_sort'] = df[("Input", "energy_system_combination")].map(energy_system_map_new)
-        df = df[~df['energy_system_sort'].astype(str).str.endswith("PV1", na=False)]
-        
+        df["energy_system_sort"] = df[("Input", "energy_system_combination")].map(
+            energy_system_map_new
+        )
+        df = df[~df["energy_system_sort"].astype(str).str.endswith("PV1", na=False)]
 
         # Keep only those categories that exist in the DataFrame
-        present_categories = [c for c in desired_order if c in df['energy_system_sort'].unique()]
+        present_categories = [
+            c for c in desired_order if c in df["energy_system_sort"].unique()
+        ]
 
         # Print which ones are missing
         missing_categories = set(desired_order) - set(present_categories)
@@ -620,15 +639,13 @@ class BuildingSizerPostprocessor:
             print("Dropping empty categories from x-axis:", missing_categories)
 
         # Apply categorical order only with present categories
-        df['energy_system_sort'] = pd.Categorical(
-            df['energy_system_sort'],
-            categories=present_categories,
-            ordered=True
+        df["energy_system_sort"] = pd.Categorical(
+            df["energy_system_sort"], categories=present_categories, ordered=True
         )
 
         # Create larger figure
         ax = self._create_figure_and_labels(kpi_column=kpi_column)
-        ax.get_figure().set_size_inches(12,4)  # adjust after ax already exists
+        ax.get_figure().set_size_inches(12, 4)  # adjust after ax already exists
         # reset index to avoid dubplicated indices
         df = df.reset_index(drop=True)
         # Lineplot: lines between same hue values
@@ -654,22 +671,24 @@ class BuildingSizerPostprocessor:
             energy_system_column,
         ]
         if [col for col in required_cols if col not in df.columns]:
-            raise KeyError(f"One of the columns {kpi_column.multiindex_output_column}, {energy_system_column}, or {hue_column} is missing in the DataFrame.")
+            raise KeyError(
+                f"One of the columns {kpi_column.multiindex_output_column}, {energy_system_column}, or {hue_column} is missing in the DataFrame."
+            )
 
         # Scatterplot: for legend and point emphasis
         # Count unique hue values
         num_hues = df[hue_column].nunique()
         sns.scatterplot(
             data=df,
-            x='energy_system_sort', # energy_system_column,
+            x="energy_system_sort",  # energy_system_column,
             y=kpi_column.multiindex_output_column,
             hue=hue_column,
-            s=80,# if num_hues <= 10 else 10,
+            s=80,  # if num_hues <= 10 else 10,
             ax=ax,
             legend=False if num_hues > 10 else "full",  # hide legend if > 10 hues
             palette=palette,
         )
-        ax.set_xlabel("")   # remove x-axis label
+        ax.set_xlabel("")  # remove x-axis label
 
         # Make dotted vertical line after each Nth category
         for index, xi in enumerate(df["energy_system_sort"].cat.categories):
@@ -742,12 +761,8 @@ class BuildingSizerPostprocessor:
         label_cols: List[tuple] = [("Input", "pv_id"), ("Input", "batt_ems_id")],
     ):
         # Use your own figure helper (remove plt.subplots to avoid overwriting)
-        fig, ax = plt.subplots(
-            figsize=(8,6), dpi=self.hisim_chartbase.dpi
-        )
-        ax.set_xlabel(
-            "", fontsize=self.hisim_chartbase.fontsize_label
-        )
+        fig, ax = plt.subplots(figsize=(8, 6), dpi=self.hisim_chartbase.dpi)
+        ax.set_xlabel("", fontsize=self.hisim_chartbase.fontsize_label)
         ax.set_ylabel(
             "\n".join(textwrap.wrap(kpi_column.pretty_label, width=30)),
             fontsize=self.hisim_chartbase.fontsize_label,
@@ -774,9 +789,9 @@ class BuildingSizerPostprocessor:
             df[energy_system_column],
             categories=sorted(
                 df[energy_system_column].unique(),
-                key=lambda x: desired_order.index(extract_system(x))
+                key=lambda x: desired_order.index(extract_system(x)),
             ),
-            ordered=True
+            ordered=True,
         )
         rows_to_drop = []
         for idx, row in df.iterrows():
@@ -818,7 +833,7 @@ class BuildingSizerPostprocessor:
             palette=palette,
         )
         # Rotate and resize x-ticks
-        ax.tick_params(axis='x', rotation=45)
+        ax.tick_params(axis="x", rotation=45)
         for x_tick in ax.get_xticklabels():
             ax.axvline(x=x_tick.get_position()[0], color="gray", linestyle=":")
 
@@ -827,12 +842,15 @@ class BuildingSizerPostprocessor:
             label = "".join(str(row[col]) for col in label_cols if col in df.columns)
             ax.annotate(
                 label,
-                xy=(row[energy_system_column], row[kpi_column.multiindex_output_column]),
-                xytext=(-1, 1),              # shift left (-x) and up (+y)
+                xy=(
+                    row[energy_system_column],
+                    row[kpi_column.multiindex_output_column],
+                ),
+                xytext=(-1, 1),  # shift left (-x) and up (+y)
                 textcoords="offset points",  # interpret xytext as offset in points
-                ha="right",                  # align right so label ends at marker
-                va="bottom",                 # text sits above the marker
-                fontsize=8
+                ha="right",  # align right so label ends at marker
+                va="bottom",  # text sits above the marker
+                fontsize=8,
             )
         # Find min and max y values
         y_values = df[kpi_column.multiindex_output_column]
@@ -872,7 +890,10 @@ class BuildingSizerPostprocessor:
         plt.xlabel("")
 
         # Save figure
-        filepath = output_dir / f"{kpi_column.kpi_column}_per_energy_system_{building_type}_scatter_test.png"
+        filepath = (
+            output_dir
+            / f"{kpi_column.kpi_column}_per_energy_system_{building_type}_scatter_test.png"
+        )
         # plt.tight_layout()
         plt.savefig(filepath, dpi=self.hisim_chartbase.dpi, bbox_inches="tight")
         plt.close()
@@ -951,12 +972,18 @@ class BuildingSizerPostprocessor:
         desired_order = list(energy_system_map_new.values())
 
         # Map original column to short names
-        df['energy_system_sort'] = df[("Input", "energy_system_combination")].map(energy_system_map_new)
-        if 'energy_system_sort' not in df.columns:
-            raise KeyError("'energy_system_sort' column was not created; check mapping.")
+        df["energy_system_sort"] = df[("Input", "energy_system_combination")].map(
+            energy_system_map_new
+        )
+        if "energy_system_sort" not in df.columns:
+            raise KeyError(
+                "'energy_system_sort' column was not created; check mapping."
+            )
 
         # Keep only those categories that exist in the DataFrame
-        present_categories = [c for c in desired_order if c in df['energy_system_sort'].unique()]
+        present_categories = [
+            c for c in desired_order if c in df["energy_system_sort"].unique()
+        ]
 
         # Print which ones are missing
         missing_categories = set(desired_order) - set(present_categories)
@@ -966,15 +993,15 @@ class BuildingSizerPostprocessor:
         # --- Boxplot ---
         sns.boxplot(
             data=df,
-            x="energy_system_sort",   # use column name, not Series
+            x="energy_system_sort",  # use column name, not Series
             y=kpi_column.multiindex_output_column,
             ax=ax,
             linewidth=1,
             color="lightgreen",
             order=present_categories,
-            showfliers=False,   # hide outliers
+            showfliers=False,  # hide outliers
         )
-        ax.set_xlabel("")   # remove x-axis label
+        ax.set_xlabel("")  # remove x-axis label
 
         # --- Fix x-ticks (only present categories) ---
         plt.tick_params(labelsize=self.hisim_chartbase.fontsize_ticks)
@@ -984,7 +1011,7 @@ class BuildingSizerPostprocessor:
         # Save figure
         plot_file = (
             output_dir
-            / f"{kpi_column.kpi_column}_boxplot_per_energy_system_{building_type}_PV_comparison.png"
+            / f"{kpi_column.kpi_column}_boxplot_per_energy_system_{building_type}.png"
         )
         # plt.tight_layout()
         plt.savefig(plot_file, dpi=self.hisim_chartbase.dpi, bbox_inches="tight")
@@ -1012,7 +1039,6 @@ class BuildingSizerPostprocessor:
         stats.to_csv(stats_file, index=False)
         print("Saved boxplot statistics:", stats_file)
 
-
     def save_collected_results_to_csv(
         self,
         df: pd.DataFrame,
@@ -1038,7 +1064,10 @@ class BuildingSizerPostprocessor:
         return df_subset
 
     def collect_building_sizer_results(
-        self, files: List[Path], kpi_column: PrettyKpiLabels, resume_all_bs_results_in_excel: bool
+        self,
+        files: List[Path],
+        kpi_column: PrettyKpiLabels,
+        resume_all_bs_results_in_excel: bool,
     ):
         collected_dfs = []
         for file_path in files:
@@ -1064,7 +1093,10 @@ class BuildingSizerPostprocessor:
 
         # save all as excel if wanted
         if resume_all_bs_results_in_excel:
-            with pd.ExcelWriter(self.output_folder / f"all_bs_results_{self.year}.xlsx", engine="openpyxl") as writer:
+            with pd.ExcelWriter(
+                self.output_folder / f"all_bs_results_{self.year}.xlsx",
+                engine="openpyxl",
+            ) as writer:
                 used_names = set()
                 for file_path in files:
                     # read each building sizer result
@@ -1093,28 +1125,40 @@ class BuildingSizerPostprocessor:
 
 # ---------- Run It ----------
 if __name__ == "__main__":
-    year = "2024"
-    config_year_request_path_string = (
-        f"F_hisim_building_sizer_optimization/0/{year}/bs_requests_20250910_1226"
+    year = "2050"
+    # config_year_request_path_string = (
+    #     f"F_hisim_building_sizer_optimization/0/{year}/bs_requests_20250910_1226"
+    # )
+    # INPUT_FOLDER = Path(
+    #     "/fast/home/k-rieck/hisim_building_clustering/test_results/test_building_types/"
+    #     + config_year_request_path_string
+    # )
+    # OUTPUT_FOLDER = (
+    #     Path(
+    #         "/fast/home/k-rieck/Thesis_2022-2025/Results/Sensitivity_Analysis_12_Building_Types/"
+    #         + config_year_request_path_string
+    #     )
+    #     # / "worst"
+    # )
+    samples_all_tries = (
+        "F_hisim_building_sizer_optimization/16_new/samples_all/2050/20250910"
     )
-    INPUT_FOLDER = Path(
-        "/fast/home/k-rieck/hisim_building_clustering/test_results/test_building_types/"
-        + config_year_request_path_string
+    # samples_hundred = "F_hisim_building_sizer_optimization/16_new/samples_100/2050/bs_requests_20250831_2309"
+    # samples_thousand = "F_hisim_building_sizer_optimization/16_new/samples_1000/2050/" # 20250831"
+    year = "2050"
+    INPUT_FOLDER = (
+        Path(
+            "/fast/central/projects/2022-k-rieck-phd/paper_2_clustering_german_building_stock/hisim_building_clustering_analysis/"
+        )
+        / samples_all_tries
     )
     OUTPUT_FOLDER = (
         Path(
-            "/fast/home/k-rieck/Thesis_2022-2025/Results/Sensitivity_Analysis_12_Building_Types/"
-            + config_year_request_path_string
+            "/fast/home/k-rieck/Thesis_2022-2025/Results/Clustering_Sachsen_Config_16/"
         )
-        # / "worst"
-    )
-    # samples_all_tries = "F_hisim_building_sizer_optimization/16_new/samples_all/2050/20250910"
-    # # samples_hundred = "F_hisim_building_sizer_optimization/16_new/samples_100/2050/bs_requests_20250831_2309"
-    # # samples_thousand = "F_hisim_building_sizer_optimization/16_new/samples_1000/2050/" # 20250831"
-    # year = "2050"
-    # INPUT_FOLDER = Path("/fast/central/projects/2022-k-rieck-phd/paper_2_clustering_german_building_stock/hisim_building_clustering_analysis/") / samples_all_tries
-    # OUTPUT_FOLDER = Path(
-    #     "/fast/home/k-rieck/Thesis_2022-2025/Results/Clustering_Sachsen_Config_16/") / samples_all_tries # / "worst"
+        / samples_all_tries
+        / "new"
+    )  # / "worst"
     # -------------------------------------------------------------------------------
     # Find min values
     FIND_MIN_OR_MAX = "min"
